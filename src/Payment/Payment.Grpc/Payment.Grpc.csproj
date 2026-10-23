@@ -6,16 +6,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Protobuf Include="Protos\greet.proto" GrpcServices="Server" />
-  </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" Version="2.64.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Payment.Business\Payment.Business.csproj" />
+    <ProjectReference Include="..\..\Contracts\Contracts.csproj" />
   </ItemGroup>
 
 </Project>

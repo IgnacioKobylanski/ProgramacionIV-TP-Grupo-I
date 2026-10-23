@@ -22,3 +22,12 @@ infraestructura local (Docker) y Availability (Clean Architecture).
 - Prompt: pedí el código de contratos, dominio anémico, aplicación, infraestructura y endpoints, a partir de un diagrama de clases base.
 - Qué se usó: entidades, servicio, repositorio con EF Core y endpoints de consulta.
 - Mi aporte: detecté que `EnsureCreated` no era buena práctica y pedí migraciones; corregí un error de compilación; verifiqué los paquetes instalados; probé los endpoints en el navegador, corregí detalles menores.
+
+## 5. Gestión del repositorio
+- Prompts: consultas sobre repo público o privado, idioma de los commits y revisión del `.gitignore` y del `docker-compose.yml`.
+- Mi aporte: decidí mantener el repo privado hasta la entrega, excluir los secretos con `.gitignore` y escribir los commits en español para que el grupo los entienda.
+
+## 6. Payment (gRPC, N-Layer)
+- Prompts: consulte que paso es el mas optimo sin tener el string de conexion para poder avanzar.
+- Qué se usó: contrato gRPC compartido en Contracts, entidades anémicas, repositorio idempotente, servicio de cobro simulado y servicio gRPC con logs de auditoría.
+- Mi aporte: decidí avanzar con Payment sin esperar el broker, corregí el conflicto de versiones de Google.Protobuf, levanté la infraestructura en Docker y verifiqué que el servicio arrancara y respondiera.

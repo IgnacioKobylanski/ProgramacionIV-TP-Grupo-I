@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option csharp_namespace = "Contracts.Payments";
+package payment;
+
+// Contrato gRPC entre Booking (cliente) y Payment (servidor).
+// Vive en Contracts para que ambos lados generen el código desde el mismo archivo.
+service PaymentProcessor {
+  rpc ChargeReservation (ChargeRequest) returns (ChargeReply);
+}
+
+message ChargeRequest {
+  string reservation_id = 1;
+  string user_id = 2;
+  int64 amount_cents = 3;
+  string correlation_id = 4;
+}
+
+message ChargeReply {
+  bool approved = 1;
+  string payment_id = 2;
+  string reason = 3;
+}
