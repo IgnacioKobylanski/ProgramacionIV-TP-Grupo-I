@@ -1,0 +1,4 @@
+CREATE DATABASE availability;
+CREATE DATABASE booking;
+CREATE DATABASE payment;
+CREATE DATABASE notifications;
