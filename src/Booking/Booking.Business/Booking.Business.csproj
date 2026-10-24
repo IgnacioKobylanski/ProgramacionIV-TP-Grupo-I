@@ -3,6 +3,11 @@
   <ItemGroup>
     <ProjectReference Include="..\Booking.DataAccess\Booking.DataAccess.csproj" />
     <ProjectReference Include="..\Booking.Entities\Booking.Entities.csproj" />
+    <ProjectReference Include="..\..\Contracts\Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
   </ItemGroup>
 
   <PropertyGroup>
