@@ -20,7 +20,6 @@ public interface IReservationRepository
     Task<int> ExpireOverdueAsync(DateTime nowUtc, CancellationToken ct);
 }
 
-// Capa de acceso a datos (N-Layer): Business no conoce EF Core ni Npgsql.
 public class ReservationRepository : IReservationRepository
 {
     private readonly BookingDbContext _db;
