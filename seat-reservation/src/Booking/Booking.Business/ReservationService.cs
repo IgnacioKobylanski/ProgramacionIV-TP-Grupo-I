@@ -21,12 +21,15 @@ public class ReservationService
     private readonly IPaymentGateway _payments;
     private readonly BookingRules _rules;
     private readonly ILogger<ReservationService> _logger;
+    private readonly INotificationGateway _notifier;
+
 
     public ReservationService(IReservationRepository repo, IPaymentGateway payments,
-        BookingRules rules, ILogger<ReservationService> logger)
+        INotificationGateway notifier, BookingRules rules, ILogger<ReservationService> logger)
     {
         _repo = repo;
         _payments = payments;
+        _notifier = notifier;
         _rules = rules;
         _logger = logger;
     }
@@ -86,6 +89,9 @@ public class ReservationService
                 msg.CorrelationId);
         }
 
+        if (changed && finalStatus == ReservationStatus.Confirmada)
+            await NotifyConfirmedAsync(reservation, msg, ct);
+
         _logger.LogInformation("AUDITORIA fin reserva. CorrelationId={CorrelationId} Resultado={Status} Motivo={Reason}",
             msg.CorrelationId, finalStatus, reason?.ToString() ?? "-");
     }
@@ -98,8 +104,28 @@ public class ReservationService
             : new ReservationStatusDto(r.RequestId, r.Id, r.Status.ToString(), r.Reason?.ToString(), r.ExpiresAtUtc);
     }
 
+    public Task<IReadOnlyList<Guid>> GetOccupiedSeatsAsync(Guid eventId, CancellationToken ct) =>
+    _repo.GetOccupiedSeatIdsAsync(eventId, ct);
+
     public Task<int> ExpireOverdueAsync(CancellationToken ct) =>
         _repo.ExpireOverdueAsync(DateTime.UtcNow, ct);
+
+    // El cobro ya se hizo y la reserva ya está confirmada: una falla de Notifications NO debe
+    // deshacer ni demorar la confirmación. Se registra el error y se sigue (degradación elegante).
+    private async Task NotifyConfirmedAsync(Reservation reservation, ReservationRequestedMessage msg, CancellationToken ct)
+    {
+        try
+        {
+            await _notifier.NotifyConfirmedAsync(new ReservationConfirmedNotification(
+                reservation.Id, msg.RequestId, msg.EventId, msg.SeatId, msg.UserId,
+                DateTime.UtcNow, msg.CorrelationId), ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex, "No se pudo notificar la reserva confirmada. CorrelationId={CorrelationId} ReservationId={ReservationId}",
+                msg.CorrelationId, reservation.Id);
+        }
+    }
 
     private Reservation Build(ReservationRequestedMessage msg, ReservationStatus status, RejectionReason? reason)
     {

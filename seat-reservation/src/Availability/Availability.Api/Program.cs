@@ -33,8 +33,17 @@ app.MapGet("/events", async (AvailabilityService svc, CancellationToken ct) =>
 
 app.MapGet("/events/{eventId:guid}/seats", async (Guid eventId, AvailabilityService svc, CancellationToken ct) =>
 {
-    var seats = await svc.GetSeatsAsync(eventId, ct);
-    return seats is null ? Results.NotFound() : Results.Ok(seats);
+    try
+    {
+        var seats = await svc.GetSeatsAsync(eventId, ct);
+        return seats is null ? Results.NotFound() : Results.Ok(seats);
+    }
+    catch (HttpRequestException)
+    {
+        // Sin Booking no sabemos qué asientos están ocupados: preferimos un 503 antes que
+        // mostrar como libres asientos que no lo están.
+        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
 });
 
 // Solicitud de reserva: responde 202 (aceptada, no terminada). El resultado se consulta después.

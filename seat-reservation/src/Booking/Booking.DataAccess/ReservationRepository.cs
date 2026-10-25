@@ -18,6 +18,7 @@ public interface IReservationRepository
     Task<bool> TryTransitionAsync(Guid reservationId, ReservationStatus from, ReservationStatus to,
         RejectionReason? reason, CancellationToken ct);
     Task<int> ExpireOverdueAsync(DateTime nowUtc, CancellationToken ct);
+    Task<IReadOnlyList<Guid>> GetOccupiedSeatIdsAsync(Guid eventId, CancellationToken ct);
 }
 
 public class ReservationRepository : IReservationRepository
@@ -68,4 +69,12 @@ public class ReservationRepository : IReservationRepository
         _db.Reservations
             .Where(r => r.Status == ReservationStatus.Retenida && r.ExpiresAtUtc < nowUtc)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, ReservationStatus.Vencida), ct);
+
+    // Asientos con reserva activa. Las Rechazadas y Vencidas no cuentan: ese asiento está libre.
+    public async Task<IReadOnlyList<Guid>> GetOccupiedSeatIdsAsync(Guid eventId, CancellationToken ct) =>
+        await _db.Reservations.AsNoTracking()
+            .Where(r => r.EventId == eventId &&
+                        (r.Status == ReservationStatus.Retenida || r.Status == ReservationStatus.Confirmada))
+            .Select(r => r.SeatId)
+            .ToListAsync(ct);
 }

@@ -46,3 +46,13 @@ infraestructura local (Docker) y Availability (Clean Architecture).
 - Prompt: Olvide agregar o pedir que se agreguen comentarios en codigo, pedi que se agregaran mas para respetar la consigna y de modo que sirvan de base para la documentación del grupo.
 - Qué se usó: los comentarios que justifican las decisiones: puertos y adaptadores en Availability, índice único parcial y control de concurrencia optimista en Booking, idempotencia por RequestId, deadline en la llamada gRPC, singleton del cliente de Service Bus y consistencia eventual en la consulta de estado.
 - Mi aporte:  agregue los comentarios en cada archivo y verifiqué que el proyecto siguiera compilando.
+
+## 10. Notifications (punto h)
+- Prompts: pedí asistencia para avanzar con Notifications, consulte si el diseño que sugeri era optimo para el caso.
+- Qué se usó: API mínima con su propia base, contrato `ReservationConfirmedNotification`, puerto y adaptador HTTP en Booking, aviso solo cuando la reserva queda confirmada y tolerante a fallas.
+- Mi aporte: apliqué los cambios en Booking y Notifications, resolví un error de compilación, generé la migración y verifiqué que todo compilara.
+
+## 11. Asientos libres en Availability
+- Prompts: pedí que Availability muestre solo los asientos disponibles (para que cumpliera el punto 1 del flujo, el cual habia quedado desincronizado).
+- Qué se usó: endpoint de asientos ocupados en Booking y su consumo desde Availability con el `GET` del diagrama oficial; el listado va ordenado y responde 503 si Booking no está disponible.
+- Mi aporte: apliqué los cambios en los dos servicios y verifiqué que compilaran.

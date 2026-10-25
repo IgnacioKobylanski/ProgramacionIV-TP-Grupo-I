@@ -24,4 +24,7 @@ public class HttpBookingClient : IBookingClient
         var body = await response.Content.ReadFromJsonAsync<BookingResponse>(ct);
         return body is null ? null : new BookingStatus(body.Status, body.Reason);
     }
+
+    public async Task<IReadOnlyList<Guid>> GetOccupiedSeatIdsAsync(Guid eventId, CancellationToken ct) =>
+    await _http.GetFromJsonAsync<List<Guid>>($"events/{eventId}/occupied-seats", ct) ?? new List<Guid>();
 }

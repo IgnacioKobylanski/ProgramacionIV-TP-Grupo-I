@@ -33,12 +33,22 @@ public class AvailabilityService
         return events.Select(e => new EventDto(e.Id, e.Name, e.DateUtc)).ToList();
     }
 
-    // Pendiente: cruzar con Booking para devolver solo los asientos libres.
+    // Punto 1 del flujo: devuelve solo los asientos DISPONIBLES. Availability no sabe qué
+    // reservas existen (eso es de Booking), así que se lo pregunta con el GET del diagrama.
+    // Por la consistencia eventual, un asiento recién solicitado puede verse libre unos
+    // instantes: si otro se lo gana, Booking rechaza la reserva por "asiento ocupado".
     public async Task<IReadOnlyList<SeatDto>?> GetSeatsAsync(Guid eventId, CancellationToken ct)
     {
         if (await _repo.GetEventAsync(eventId, ct) is null) return null;
+
         var seats = await _repo.GetSeatsAsync(eventId, ct);
-        return seats.Select(s => new SeatDto(s.Id, s.Label)).ToList();
+        var occupied = (await _booking.GetOccupiedSeatIdsAsync(eventId, ct)).ToHashSet();
+
+        return seats
+            .Where(s => !occupied.Contains(s.Id))
+            .OrderBy(s => s.Label[..1]).ThenBy(s => s.Label.Length).ThenBy(s => s.Label) // A1..A9, A10, B1...
+            .Select(s => new SeatDto(s.Id, s.Label))
+            .ToList();
     }
 
     // Punto 3 del flujo: verifica el asiento, registra la solicitud con id único y la
