@@ -2,7 +2,6 @@ using Booking.Api;
 using Booking.Business;
 using Booking.Business.Integration;
 using Booking.DataAccess;
-using Contracts.Messages;
 using Contracts.Payments;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +23,7 @@ builder.Services.AddScoped<IPaymentGateway, GrpcPaymentGateway>();
 
 builder.Services.AddScoped<ReservationService>();
 builder.Services.AddHostedService<ReservationExpiryWorker>();
+builder.Services.AddHostedService<ReservationRequestConsumer>();
 
 var app = builder.Build();
 
@@ -33,19 +33,14 @@ using (var scope = app.Services.CreateScope())
 }
 
 
+// Flecha GET del diagrama oficial (Availability -> Booking).
+// Un 404 significa "todavía no procesada" (consistencia eventual): Availability lo
+// traduce como "EnProceso" para el usuario.
 app.MapGet("/reservations/{requestId:guid}", async (Guid requestId, ReservationService svc, CancellationToken ct) =>
 {
     var status = await svc.GetStatusAsync(requestId, ct);
     return status is null ? Results.NotFound() : Results.Ok(status);
 });
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapPost("/dev/reservations", async (ReservationRequestedMessage msg, ReservationService svc, CancellationToken ct) =>
-    {
-        await svc.ProcessRequestAsync(msg, ct);
-        return Results.Ok(await svc.GetStatusAsync(msg.RequestId, ct));
-    });
-}
 
 app.Run();

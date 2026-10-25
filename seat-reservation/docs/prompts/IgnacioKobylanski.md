@@ -31,3 +31,18 @@ infraestructura local (Docker) y Availability (Clean Architecture).
 - Prompts: consulte que paso es el mas optimo sin tener el string de conexion para poder avanzar.
 - Qué se usó: contrato gRPC compartido en Contracts, entidades anémicas, repositorio idempotente, servicio de cobro simulado y servicio gRPC con logs de auditoría.
 - Mi aporte: decidí avanzar con Payment sin esperar el broker, corregí el conflicto de versiones de Google.Protobuf, levanté la infraestructura en Docker y verifiqué que el servicio arrancara y respondiera.
+
+## 7. Booking (N-Layer)
+- Prompts: pedí implementar Booking con retención de asientos, concurrencia, cobro por gRPC a Payment y vencimiento. Después consulté tres decisiones de diseño: si los enums en español eran correctos, si no usar un lock distribuido era la mejor opción, y si la consigna exigía tratar reembolsos(no lo hacia segun mi interpretacion).
+- Qué se usó: entidad de reserva con estados y motivos de rechazo, índice único parcial, repositorio con control de concurrencia optimista, servicio de reservas idempotente, cliente gRPC con deadline, servicio de vencimiento y endpoint de consulta de estado.
+- Mi aporte: cuestioné las decisiones de diseño antes de adoptarlas; resolví el error del build (proceso bloqueando el ejecutable); ejecuté las pruebas de camino feliz, asiento ocupado, pago no disponible, asiento liberado, concurrencia (5 pedidos simultáneos, 1 confirmado) y vencimiento, y verifiqué los estados en la base.
+
+## 8. Conexión con Azure Service Bus (Availability y Booking)
+- Prompts: compartí el ejemplo del profesor (sin la clave) y pedí conectar Availability y Booking al topic del grupo. Consulté cómo guardar el connection string sin subirlo al repo y si el publicador como singleton era una mala práctica.
+- Qué se usó: puertos `IReservationPublisher` e `IBookingClient`, publicador y consumidor de Service Bus, endpoint `POST /reservations` con respuesta 202 y endpoint de consulta del resultado.
+- Mi aporte: guardé el string con user-secrets, configuré el topic y la suscripción según el ejemplo del profesor, apliqué el ajuste para mensajes con formato inválido, revisé el consumidor y probé el flujo completo (POST con respuesta inmediata y consulta con resultado `Confirmada`).
+
+## 9. Agregar mas comentarios de diseño
+- Prompt: Olvide agregar o pedir que se agreguen comentarios en codigo, pedi que se agregaran mas para respetar la consigna y de modo que sirvan de base para la documentación del grupo.
+- Qué se usó: los comentarios que justifican las decisiones: puertos y adaptadores en Availability, índice único parcial y control de concurrencia optimista en Booking, idempotencia por RequestId, deadline en la llamada gRPC, singleton del cliente de Service Bus y consistencia eventual en la consulta de estado.
+- Mi aporte:  agregue los comentarios en cada archivo y verifiqué que el proyecto siguiera compilando.

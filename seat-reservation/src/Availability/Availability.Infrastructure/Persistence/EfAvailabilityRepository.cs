@@ -18,4 +18,16 @@ public class EfAvailabilityRepository : IAvailabilityRepository
 
     public async Task<IReadOnlyList<Seat>> GetSeatsAsync(Guid eventId, CancellationToken ct) =>
         await _db.Seats.AsNoTracking().Where(s => s.EventId == eventId).OrderBy(s => s.Label).ToListAsync(ct);
+    
+    public Task<Seat?> GetSeatAsync(Guid eventId, Guid seatId, CancellationToken ct) =>
+    _db.Seats.AsNoTracking().FirstOrDefaultAsync(s => s.EventId == eventId && s.Id == seatId, ct);
+
+    public async Task AddRequestAsync(ReservationRequest request, CancellationToken ct)
+    {
+        _db.ReservationRequests.Add(request);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public Task<ReservationRequest?> GetRequestAsync(Guid requestId, CancellationToken ct) =>
+        _db.ReservationRequests.AsNoTracking().FirstOrDefaultAsync(r => r.Id == requestId, ct);
 }
