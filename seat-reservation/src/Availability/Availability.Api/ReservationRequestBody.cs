@@ -1,4 +1,5 @@
 namespace Availability.Api;
 
-// Cuando agreguemos autenticación, UserId saldrá del token y no del cuerpo.
-public record ReservationRequestBody(Guid EventId, Guid SeatId, string UserId);
+// El usuario ya NO viaja en el cuerpo: sale del token validado.
+// Si lo aceptáramos del cliente, cualquiera podría reservar a nombre de otro.
+public record ReservationRequestBody(Guid EventId, Guid SeatId);

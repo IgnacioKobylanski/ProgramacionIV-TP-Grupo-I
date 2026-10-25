@@ -91,9 +91,12 @@ public class AvailabilityService
     }
 
     // Punto 7 del flujo: el usuario consulta a Availability y este consulta a Booking.
-    public async Task<ReservationResultDto?> GetResultAsync(Guid requestId, CancellationToken ct)
+    // Un usuario solo puede ver el resultado de SUS solicitudes. Para las ajenas respondemos
+    // igual que para las inexistentes (null -> 404) y no revelamos que existen.
+    public async Task<ReservationResultDto?> GetResultAsync(Guid requestId, string userId, CancellationToken ct)
     {
-        if (await _repo.GetRequestAsync(requestId, ct) is null) return null; // solicitud desconocida
+        var request = await _repo.GetRequestAsync(requestId, ct);
+        if (request is null || request.UserId != userId) return null;
 
         var status = await _booking.GetStatusAsync(requestId, ct);
 

@@ -56,3 +56,8 @@ infraestructura local (Docker) y Availability (Clean Architecture).
 - Prompts: pedí que Availability muestre solo los asientos disponibles (para que cumpliera el punto 1 del flujo, el cual habia quedado desincronizado).
 - Qué se usó: endpoint de asientos ocupados en Booking y su consumo desde Availability con el `GET` del diagrama oficial; el listado va ordenado y responde 503 si Booking no está disponible.
 - Mi aporte: apliqué los cambios en los dos servicios y verifiqué que compilaran.
+
+## 12. Keycloak configuracion inicial
+- Prompts: pedí asistencia para configurar desde el panel de administrador
+- Qué se usó: Panel de administracion de Keycloak
+- Mi aporte: Cree los usuarios iniciales y realice los cambios necesarios en el codigo testeando minimamente su correcto funcionamiento.
