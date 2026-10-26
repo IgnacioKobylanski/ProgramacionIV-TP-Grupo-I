@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Availability.Application\Availability.Application.csproj" />
     <ProjectReference Include="..\Availability.Infrastructure\Availability.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Contracts\Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\ServiceAuth\ServiceAuth.csproj" />
   </ItemGroup>
 
 </Project>

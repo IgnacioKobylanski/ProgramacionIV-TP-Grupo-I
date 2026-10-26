@@ -5,6 +5,7 @@ using Availability.Infrastructure;
 using Availability.Infrastructure.Persistence;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using ServiceAuth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,15 @@ builder.Services.AddInfrastructure(new InfrastructureOptions
     BookingBaseUrl = builder.Configuration["Booking:BaseUrl"]!
 });
 builder.Services.AddScoped<AvailabilityService>();
+
+
+// Availability se identifica ante Keycloak como "availability-service" para llamar a Booking.
+builder.Services.AddServiceAuth(new ServiceAuthOptions
+{
+    TokenEndpoint = builder.Configuration["ServiceAuth:TokenEndpoint"]!,
+    ClientId = builder.Configuration["ServiceAuth:ClientId"]!,
+    ClientSecret = builder.Configuration["ServiceAuth:ClientSecret"]!
+});
 
 // AUTENTICACIÓN: Availability NO guarda contraseñas ni emite tokens. Eso lo hace el servidor
 // de autorización del diagrama oficial (Keycloak). Acá solo se verifica que el token tenga

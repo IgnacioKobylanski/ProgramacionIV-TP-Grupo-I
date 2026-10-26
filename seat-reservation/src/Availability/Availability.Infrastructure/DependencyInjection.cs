@@ -4,6 +4,7 @@ using Availability.Infrastructure.Messaging;
 using Availability.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using ServiceAuth;
 
 namespace Availability.Infrastructure;
 
@@ -27,7 +28,8 @@ public static class DependencyInjection
         services.AddSingleton<IReservationPublisher>(_ =>
             new ServiceBusReservationPublisher(o.ServiceBusConnectionString, o.ServiceBusTopic));
 
-        services.AddHttpClient<IBookingClient, HttpBookingClient>(c => c.BaseAddress = new Uri(o.BookingBaseUrl));
+        services.AddHttpClient<IBookingClient, HttpBookingClient>(c => c.BaseAddress = new Uri(o.BookingBaseUrl))
+         .AddHttpMessageHandler<ServiceTokenHandler>();
         return services;
     }
 }

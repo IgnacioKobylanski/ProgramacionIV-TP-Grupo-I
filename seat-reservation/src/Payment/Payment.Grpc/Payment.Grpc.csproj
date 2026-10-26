@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Payment.Business\Payment.Business.csproj" />
     <ProjectReference Include="..\..\Contracts\Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\ServiceAuth\ServiceAuth.csproj" />
   </ItemGroup>
 
 </Project>

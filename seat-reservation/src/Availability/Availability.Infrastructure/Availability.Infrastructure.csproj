@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Availability.Application\Availability.Application.csproj" />
+    <ProjectReference Include="..\..\Shared\ServiceAuth\ServiceAuth.csproj" />
   </ItemGroup>
 
   <ItemGroup>

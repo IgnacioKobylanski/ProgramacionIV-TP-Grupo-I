@@ -14,7 +14,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: sr-keycloak
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
@@ -22,6 +22,7 @@ services:
       - "127.0.0.1:8081:8080"
     volumes:
       - keycloakdata:/opt/keycloak/data
+      - ./infra/keycloak/seat-reservation-realm.json:/opt/keycloak/data/import/seat-reservation-realm.json:ro
 
 volumes:
   pgdata:

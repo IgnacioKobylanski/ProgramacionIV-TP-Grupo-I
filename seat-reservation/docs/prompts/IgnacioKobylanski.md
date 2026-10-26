@@ -61,3 +61,13 @@ infraestructura local (Docker) y Availability (Clean Architecture).
 - Prompts: pedí asistencia para configurar desde el panel de administrador
 - Qué se usó: Panel de administracion de Keycloak
 - Mi aporte: Cree los usuarios iniciales y realice los cambios necesarios en el codigo testeando minimamente su correcto funcionamiento.
+
+## 13. Autenticación entre servicios (punto e)
+- Prompts: pedí seguir con la autenticación entre servicios;.
+- Qué se usó: dos clients de servicio en Keycloak, un proyecto compartido que pide y reutiliza el token de servicio, y políticas que aceptan solo al servicio que corresponde (Booking acepta a Availability; Payment y Notifications aceptan a Booking).
+- Mi aporte: creé los clients, corregí el Client ID mal cargado, guardé los secretos con user-secrets, apliqué el código y verifiqué el flujo completo y los rechazos (sin token da 401 y con un token de otro servicio o usuario da 403).
+
+## 14. Exportación del realm
+- Prompts: pedí que la configuración de Keycloak quede en el repositorio y se cargue sola al levantar Docker.
+- Qué se usó: exportación del realm a `infra/keycloak/seat-reservation-realm.json` y el montaje del archivo para importarlo al iniciar.
+- Mi aporte: exporté el realm y verifiqué que el archivo incluye los clients y los usuarios de prueba.
