@@ -55,7 +55,8 @@ Payment tiene un único método gRPC, llamado **ChargeReservation** (cobrar rese
 
 ### Cómo se procesa el cobro
 
-flowchart TD
+```mermaid
+flowchart TB
 
     classDef io fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#0d47a1,rx:8px,ry:8px;
     classDef decision fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#e65100;
@@ -64,7 +65,7 @@ flowchart TD
     classDef success fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20,rx:6px,ry:6px;
     classDef error fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#b71c1c,rx:6px,ry:6px;
 
-    S["<b>Llega la orden de cobro</b><br/><i>Método: ChargeReservation</i><hr/><b>Datos que recibe:</b><br/>• <code>reservation_id</code>: número de reserva<br/>• <code>user_id</code>: usuario que reserva<br/>• <code>amount_cents</code>: monto en centavos<br/>• <code>correlation_id</code>: cód. seguimiento"]:::io
+    S["<b>Llega la orden de cobro</b><br/><i>Método: ChargeReservation</i><br/>──────────────<br/><b>Datos que recibe:</b><br/>• reservation_id: número de reserva<br/>• user_id: usuario que reserva<br/>• amount_cents: monto en centavos<br/>• correlation_id: cód. seguimiento"]:::io
 
     S --> V{"¿El número de reserva<br/>es válido?"}:::decision
 
@@ -74,14 +75,14 @@ flowchart TD
 
     M --> A{"¿Monto > 0 y<br/>no supera el máximo?"}:::decision
 
-    A -->|"Sí"| OK["<b>Pago Aprobado</b><hr/>• <code>approved</code>: verdadero<br/>• <code>reason</code>: <i>vacío</i>"]:::success
-    A -->|"No"| NO["<b>Pago Rechazado</b><hr/>• <code>approved</code>: falso<br/>• <code>reason</code>: monto fuera de rango"]:::error
-
+    A -->|"Sí"| OK["<b>Pago Aprobado</b><br/>──────────────<br/>• approved: verdadero<br/>• reason: <i>vacío</i>"]:::success
+    A -->|"No"| NO["<b>Pago Rechazado</b><br/>──────────────<br/>• approved: falso<br/>• reason: monto fuera de rango"]:::error
 
     OK --> G[("Se guarda el pago")]:::db
     NO --> G
 
-    G --> R["<b>Se responde a Booking</b><br/><i>Método: ChargeReservation</i><hr/><b>Datos que devuelve:</b><br/>• <code>approved</code>: aprobado (sí / no)<br/>• <code>payment_id</code>: nro. pago guardado<br/>• <code>reason</code>: motivo del rechazo"]:::io
+    G --> R["<b>Se responde a Booking</b><br/><i>Método: ChargeReservation</i><br/>──────────────<br/><b>Datos que devuelve:</b><br/>• approved: aprobado (sí / no)<br/>• payment_id: nro. pago guardado<br/>• reason: motivo del rechazo"]:::io
+```
 
 Puntos importantes:
 
