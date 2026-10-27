@@ -76,3 +76,13 @@ infraestructura local (Docker) y Availability (Clean Architecture).
 - Prompts: Debati la manera de como se va a levantar el backend del proyecto, teniendo en cuenta lo que dijo el profesor (lo que no está aclarado no está prohibido, solo hace falta que compile y levante) pedí asistencia para hacerlo desde el docker compose up.
 - Qué se usó: un Dockerfile compartido por los cuatro servicios, un docker-compose con PostgreSQL, Keycloak y los servicios, dos réplicas de Booking sobre la misma suscripción, la configuración del emisor de Keycloak para que los tokens valgan dentro y fuera de Docker, y secretos de desarrollo fijos en el realm.
 - Mi aporte: decidí dockerizar por ser la forma más limpia de ejecutar el sistema, apliqué los archivos y los secretos del realm, y creé el `.env` con el connection string. [Verifiqué que el sistema levanta con un solo `docker compose up` y que las dos réplicas se reparten los mensajes.]
+
+## 16. Eliminacion de .env
+- Prompts: pedí un script para que le sea mas sencillo al grupo guardar el string de conexion.
+- Qué se usó: se crearon varios scripts para mejorar la calidad de vida del grupo al momento de levantar el proyecto.
+- Mi aporte: edite un par de errores en los scripts para que no dieran errores y los probe.
+
+## 17. Varios eventos y CORS
+- Prompts: Le pedi que agregue dos eventos mas en el seeder y me pasara el codigo necesario para las clases para poder sumar 2 eventos mas.
+- Qué se usó: tres eventos sembrados de forma idempotente.
+- Mi aporte: aplique los cambios necesesarios, levante la app para ver que no habia problemas.

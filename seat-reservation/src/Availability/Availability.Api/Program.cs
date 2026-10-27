@@ -23,6 +23,10 @@ builder.Services.AddInfrastructure(new InfrastructureOptions
 });
 builder.Services.AddScoped<AvailabilityService>();
 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+
 
 // Availability se identifica ante Keycloak como "availability-service" para llamar a Booking.
 builder.Services.AddServiceAuth(new ServiceAuthOptions
@@ -55,6 +59,7 @@ using (var scope = app.Services.CreateScope())
     await DbSeeder.InitializeAsync(scope.ServiceProvider.GetRequiredService<AvailabilityDbContext>());
 }
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -80,6 +85,15 @@ app.MapGet("/events/{eventId:guid}/seats", async (Guid eventId, AvailabilityServ
         return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
     }
 });
+
+// Alta de eventos (la usaría un formulario del frontend). Requiere token.
+app.MapPost("/events", async (CreateEventBody body, AvailabilityService svc, CancellationToken ct) =>
+{
+    var (ev, error) = await svc.CreateEventAsync(body.Name, body.DateUtc, body.Rows, body.SeatsPerRow, ct);
+    return ev is null
+        ? Results.BadRequest(new { error })
+        : Results.Created($"/events/{ev.Id}/seats", ev);
+}).RequireAuthorization();
 
 // Para reservar hace falta un token (punto 2 del flujo). Responde 202: aceptada, no terminada.
 app.MapPost("/reservations", async (ReservationRequestBody body, HttpContext http,

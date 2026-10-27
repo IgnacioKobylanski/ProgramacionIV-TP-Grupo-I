@@ -106,4 +106,26 @@ public class AvailabilityService
             ? new ReservationResultDto(requestId, "EnProceso", null)
             : new ReservationResultDto(requestId, status.Status, status.Reason);
     }
+
+    // Crea un evento con sus asientos (filas con letra y número: A1, A2... B1...).
+    // La lógica vive acá y no en las entidades (dominio anémico). Devuelve el evento o un mensaje de error.
+    public async Task<(EventDto? Event, string? Error)> CreateEventAsync(
+        string name, DateTime dateUtc, int rows, int seatsPerRow, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return (null, "El nombre es obligatorio");
+        if (rows is < 1 or > 26) return (null, "Las filas tienen que ser entre 1 y 26");
+        if (seatsPerRow is < 1 or > 50) return (null, "Los asientos por fila tienen que ser entre 1 y 50");
+
+        // Npgsql exige fechas en UTC para este tipo de columna.
+        var date = dateUtc.Kind == DateTimeKind.Local ? dateUtc.ToUniversalTime() : DateTime.SpecifyKind(dateUtc, DateTimeKind.Utc);
+        if (date <= DateTime.UtcNow) return (null, "La fecha tiene que ser futura");
+
+        var ev = new Event { Id = Guid.NewGuid(), Name = name.Trim(), DateUtc = date };
+        for (var r = 0; r < rows; r++)
+            for (var n = 1; n <= seatsPerRow; n++)
+                ev.Seats.Add(new Seat { Id = Guid.NewGuid(), EventId = ev.Id, Label = $"{(char)('A' + r)}{n}" });
+
+        await _repo.AddEventAsync(ev, ct);
+        return (new EventDto(ev.Id, ev.Name, ev.DateUtc), null);
+    }
 }

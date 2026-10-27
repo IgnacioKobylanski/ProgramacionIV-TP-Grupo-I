@@ -1,11 +1,20 @@
 # Funciones de ayuda para las pruebas. Cargar con:   . ./scripts/funciones-prueba.ps1
-$EventoDemo = "11111111-1111-1111-1111-111111111111"
+# Eventos de prueba: 0 = Recital (20 asientos), 1 = Conferencia (24), 2 = Obra de teatro (24)
+$IdsEvento = @{
+    0 = "11111111-1111-1111-1111-111111111111"
+    1 = "22222222-2222-2222-2222-222222222222"
+    2 = "33333333-3333-3333-3333-333333333333"
+}
+$EventoDemo = $IdsEvento[0]
 
-# Id del asiento número N (hay 20: del 1 al 10 son A1..A10 y del 11 al 20 son B1..B10)
-function Seat($n) { "00000000-0000-0000-0000-" + $n.ToString("D12") }
+# Lista de eventos (no requiere token)
+function Eventos { Invoke-RestMethod http://localhost:5001/events }
 
-# Asientos libres del evento de prueba (no requiere token)
-function Asientos { Invoke-RestMethod "http://localhost:5001/events/$EventoDemo/seats" }
+# Id del asiento número N del evento E (por defecto, el evento 0)
+function Seat($n, $e = 0) { "00000000-0000-0000-" + $e.ToString("D4") + "-" + $n.ToString("D12") }
+
+# Asientos libres del evento E (no requiere token)
+function Asientos($e = 0) { Invoke-RestMethod "http://localhost:5001/events/$($IdsEvento[$e])/seats" }
 
 # Token de un usuario de prueba (usuario1 o usuario2; la contraseña es igual al usuario)
 function Token($user) {
@@ -19,11 +28,11 @@ function Resultado($requestId, $user) {
     Invoke-RestMethod "http://localhost:5001/reservations/$requestId" -Headers @{ Authorization = "Bearer $(Token $user)" }
 }
 
-# Reserva un asiento con el token del usuario y espera (hasta 15 segundos) un resultado final.
+# Reserva un asiento del evento E con el token del usuario y espera (hasta 15 segundos) un resultado final.
 # Guarda el id de la solicitud en $UltimaSolicitud para consultarla después con Resultado.
-function ReservarAutenticado($seat, $user) {
+function ReservarAutenticado($seat, $user, $e = 0) {
     $h = @{ Authorization = "Bearer $(Token $user)" }
-    $body = @{ eventId = $EventoDemo; seatId = $seat } | ConvertTo-Json
+    $body = @{ eventId = $IdsEvento[$e]; seatId = $seat } | ConvertTo-Json
     $r = Invoke-RestMethod -Method Post -Uri http://localhost:5001/reservations -Headers $h -ContentType "application/json" -Body $body
     $global:UltimaSolicitud = $r.requestId
 

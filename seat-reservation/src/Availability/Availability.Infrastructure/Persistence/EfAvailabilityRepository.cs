@@ -30,4 +30,10 @@ public class EfAvailabilityRepository : IAvailabilityRepository
 
     public Task<ReservationRequest?> GetRequestAsync(Guid requestId, CancellationToken ct) =>
         _db.ReservationRequests.AsNoTracking().FirstOrDefaultAsync(r => r.Id == requestId, ct);
+
+    public async Task AddEventAsync(Event ev, CancellationToken ct)
+    {
+        _db.Events.Add(ev); // agrega también sus asientos
+        await _db.SaveChangesAsync(ct);
+    }
 }
