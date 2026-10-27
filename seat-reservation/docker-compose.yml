@@ -130,6 +130,13 @@ services:
       <<: *auth-env
       ConnectionStrings__Notifications: Host=postgres;Port=5432;Database=notifications;Username=app;Password=app
 
+  frontend:
+    build: ./frontend
+    container_name: sr-frontend
+    ports:
+      - "127.0.0.1:3000:80"
+
+
 volumes:
   pgdata:
   keycloakdata:
