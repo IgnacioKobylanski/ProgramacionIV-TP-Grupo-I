@@ -71,3 +71,8 @@ infraestructura local (Docker) y Availability (Clean Architecture).
 - Prompts: pedí que la configuración de Keycloak quede en el repositorio y se cargue sola al levantar Docker.
 - Qué se usó: exportación del realm a `infra/keycloak/seat-reservation-realm.json` y el montaje del archivo para importarlo al iniciar.
 - Mi aporte: exporté el realm y verifiqué que el archivo incluye los clients y los usuarios de prueba.
+
+## 15. Docker Compose con todos los servicios y réplicas de Booking
+- Prompts: Debati la manera de como se va a levantar el backend del proyecto, teniendo en cuenta lo que dijo el profesor (lo que no está aclarado no está prohibido, solo hace falta que compile y levante) pedí asistencia para hacerlo desde el docker compose up.
+- Qué se usó: un Dockerfile compartido por los cuatro servicios, un docker-compose con PostgreSQL, Keycloak y los servicios, dos réplicas de Booking sobre la misma suscripción, la configuración del emisor de Keycloak para que los tokens valgan dentro y fuera de Docker, y secretos de desarrollo fijos en el realm.
+- Mi aporte: decidí dockerizar por ser la forma más limpia de ejecutar el sistema, apliqué los archivos y los secretos del realm, y creé el `.env` con el connection string. [Verifiqué que el sistema levanta con un solo `docker compose up` y que las dos réplicas se reparten los mensajes.]

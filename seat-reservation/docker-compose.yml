@@ -1,3 +1,18 @@
+# Infraestructura (PostgreSQL y Keycloak) y los cuatro servicios.
+# Credenciales de DESARROLLO local: no hay datos reales.
+# El connection string de Azure NO está en este archivo: se guarda con "dotnet user-secrets"
+# y se monta (solo lectura) en los contenedores que lo necesitan.
+
+# Configuración común de validación de tokens: los servicios consultan a Keycloak por la red interna.
+x-auth-env: &auth-env
+  Auth__Authority: http://keycloak:8080/realms/seat-reservation
+  Auth__RequireHttpsMetadata: "false"
+
+# Carpeta de user-secrets de la máquina. En Windows es %APPDATA%\Microsoft\UserSecrets;
+# en Mac o Linux, definir USER_SECRETS_DIR=$HOME/.microsoft/usersecrets antes de levantar.
+x-user-secrets: &user-secrets
+  - ${USER_SECRETS_DIR:-${APPDATA}/Microsoft/UserSecrets}:/root/.microsoft/usersecrets:ro
+
 services:
   postgres:
     image: postgres:16
@@ -10,6 +25,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
@@ -18,12 +38,98 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # El emisor (iss) de TODOS los tokens es siempre http://localhost:8081, sin importar si
+      # se pidieron desde el navegador o desde otro contenedor por la red interna.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "127.0.0.1:8081:8080"
     volumes:
       - keycloakdata:/opt/keycloak/data
       - ./infra/keycloak/seat-reservation-realm.json:/opt/keycloak/data/import/seat-reservation-realm.json:ro
 
+  availability:
+    build:
+      context: .
+      args:
+        PROJECT: Availability/Availability.Api/Availability.Api.csproj
+        DLL: Availability.Api.dll
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    ports:
+      - "127.0.0.1:5001:8080"
+    volumes: *user-secrets
+    environment:
+      <<: *auth-env
+      ASPNETCORE_ENVIRONMENT: Development   # necesario para que .NET lea los user-secrets
+      ConnectionStrings__Availability: Host=postgres;Port=5432;Database=availability;Username=app;Password=app
+      ServiceBus__TopicName: grupo1-booking-topic
+      Booking__BaseUrl: http://booking:8080/
+      ServiceAuth__TokenEndpoint: http://keycloak:8080/realms/seat-reservation/protocol/openid-connect/token
+      ServiceAuth__ClientId: availability-service
+      ServiceAuth__ClientSecret: availability-service-dev-secret
+
+  booking:
+    build:
+      context: .
+      args:
+        PROJECT: Booking/Booking.Api/Booking.Api.csproj
+        DLL: Booking.Api.dll
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    # Dos réplicas: las dos leen de la MISMA suscripción y el broker entrega cada mensaje a una sola.
+    deploy:
+      replicas: 2
+    ports:
+      - "127.0.0.1:5002-5003:8080"
+    volumes: *user-secrets
+    environment:
+      <<: *auth-env
+      ASPNETCORE_ENVIRONMENT: Development   # necesario para que .NET lea los user-secrets
+      ConnectionStrings__Booking: Host=postgres;Port=5432;Database=booking;Username=app;Password=app
+      ServiceBus__TopicName: grupo1-booking-topic
+      ServiceBus__SubscriptionName: booking
+      Payment__Address: http://payment:8080
+      Notifications__BaseUrl: http://notifications:8080/
+      ServiceAuth__TokenEndpoint: http://keycloak:8080/realms/seat-reservation/protocol/openid-connect/token
+      ServiceAuth__ClientId: booking-service
+      ServiceAuth__ClientSecret: booking-service-dev-secret
+
+  # Payment no se publica hacia afuera: solo Booking lo llama, por la red interna.
+  payment:
+    build:
+      context: .
+      args:
+        PROJECT: Payment/Payment.Grpc/Payment.Grpc.csproj
+        DLL: Payment.Grpc.dll
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    environment:
+      <<: *auth-env
+      ConnectionStrings__Payment: Host=postgres;Port=5432;Database=payment;Username=app;Password=app
+
+  notifications:
+    build:
+      context: .
+      args:
+        PROJECT: Notifications/Notifications.csproj
+        DLL: Notifications.dll
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    ports:
+      - "127.0.0.1:5004:8080"
+    environment:
+      <<: *auth-env
+      ConnectionStrings__Notifications: Host=postgres;Port=5432;Database=notifications;Username=app;Password=app
+
 volumes:
   pgdata:
-  keycloakdata:  
+  keycloakdata:
