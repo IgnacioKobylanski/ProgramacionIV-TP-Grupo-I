@@ -75,4 +75,4 @@ Keycloak gestiona los tokens JWT utilizados por el sistema. Las consultas públi
 
 Los componentes utilizan un `CorrelationId` para relacionar los registros de una misma solicitud a lo largo del procesamiento. Esto permite seguir el recorrido de la reserva entre servicios.
 
-La [tabla de componentes](tabla-componentes-1.md) resume la función y la justificación de cada elemento del diagrama.
+La [tabla de componentes](tabla-componentes.md) resume la función y la justificación de cada elemento del diagrama.
