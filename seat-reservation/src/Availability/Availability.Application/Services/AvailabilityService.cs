@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Availability.Application.Services;
 
 public record EventDto(Guid Id, string Name, DateTime DateUtc);
-public record SeatDto(Guid Id, string Label);
+public record SeatDto(Guid Id, string Label, bool Occupied);
 public record ReservationResultDto(Guid RequestId, string Status, string? Reason);
 
 // Servicio de aplicación: orquesta los casos de uso. Las reglas viven acá y no en las
@@ -33,7 +33,7 @@ public class AvailabilityService
         return events.Select(e => new EventDto(e.Id, e.Name, e.DateUtc)).ToList();
     }
 
-    // Punto 1 del flujo: devuelve solo los asientos DISPONIBLES. Availability no sabe qué
+    // Punto 1 del flujo: devuelve asientos disponibles y ocupados. Availability no sabe qué
     // reservas existen (eso es de Booking), así que se lo pregunta con el GET del diagrama.
     // Por la consistencia eventual, un asiento recién solicitado puede verse libre unos
     // instantes: si otro se lo gana, Booking rechaza la reserva por "asiento ocupado".
@@ -45,9 +45,8 @@ public class AvailabilityService
         var occupied = (await _booking.GetOccupiedSeatIdsAsync(eventId, ct)).ToHashSet();
 
         return seats
-            .Where(s => !occupied.Contains(s.Id))
             .OrderBy(s => s.Label[..1]).ThenBy(s => s.Label.Length).ThenBy(s => s.Label) // A1..A9, A10, B1...
-            .Select(s => new SeatDto(s.Id, s.Label))
+            .Select(s => new SeatDto(s.Id, s.Label, occupied.Contains(s.Id)))
             .ToList();
     }
 
