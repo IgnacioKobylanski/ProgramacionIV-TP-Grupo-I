@@ -32,11 +32,13 @@ useEffect(() => {
       if (!transitorio) {
         setError(err); // 401/404: no reintentar
         return
-    }
+    }}
+    // Corta a los 30 s aunque el servidor siga respondiendo sin estado final.
     if (Date.now() - inicio > POLL_TIMEOUT_MS) {
       setTimedOut(true);
       return;
-    }}
+    }
+    // corta al segundo si no se completó
     timer = setTimeout(consultar, POLL_INTERVAL_MS);
   };
 
