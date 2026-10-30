@@ -1,77 +1,120 @@
-import { useEffect, useState } from 'react';
+// Pantalla 2 ( ruta: /events/:eventId )
+// Muestra la sala del evento: verde = libre, rojo = ocupado, azul = seleccionado.
+// Ver los asientos no requiere sesion; para reservar, primero hay que ingresar.
+
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api, type ApiError, type SeatDto } from '../services';
+import { api, type ApiError } from '../services';
 import { useAuth } from '../auth/AuthContext';
 import { Asiento } from '../components/Asiento';
+import { Cargando, ErrorMensaje } from '../components/Estados';
+import { useAsync } from '../hooks/useAsync';
+import { fechaLarga } from '../utils/formato';
 import { armarGrilla } from '../utils/grilla';
+import { borrarSeleccion, guardarSeleccion, leerSeleccion } from '../utils/seleccion';
 
 export function AsientosPage() {
   const { eventId = '' } = useParams();
   const navigate = useNavigate();
   const { isLogged, login } = useAuth();
 
-  const [asientos, setAsientos] = useState<SeatDto[] | null>(null);
-  const [error, setError] = useState<ApiError | null>(null);
-  const [seleccionado, setSeleccionado] = useState<string>();
-  const [enviando, setEnviando] = useState(false);
+  const evento = useAsync(async () => (await api.getEvents()).find((e) => e.id === eventId) ?? null, [eventId]);
+  const asientos = useAsync(() => api.getSeats(eventId), [eventId]);
+  
+  // Al abrir la pantalla, recupera el asiento elegido antes de ir al login (si hay)
+  const [seleccionado, setSeleccionado] = useState<string | undefined>(() => leerSeleccion(eventId));
+  const [enviando, setEnviando] = useState(false); // evita el doble clic en "Reservar"
+  const [errorReserva, setErrorReserva] = useState<ApiError | null>(null);
 
-  useEffect(() => {
-    api.getSeats(eventId).then(setAsientos).catch((e: ApiError) => setError(e));
-  }, [eventId]);
+  const todos = asientos.data;
+  const libres = todos?.filter((s) => !s.occupied);
+  // Si el asiento recordado ya no esta libre (otro lo reservo), se ignora
+  const seleccionValida = libres?.some((s) => s.id === seleccionado) ? seleccionado : undefined;
+  const labelSel = libres?.find((s) => s.id === seleccionValida)?.label;
+
+  // Si se toca el mismo asiento de nuevo, se deselecciona
+  const elegir = (id: string) => {
+    setSeleccionado(id === seleccionValida ? undefined : id);
+    setErrorReserva(null);
+  };
 
   const reservar = async () => {
-    if (!seleccionado) return;
+    if (!seleccionValida) return;
+
+    // Sin sesion: guarda el asiento y manda al login. Keycloak lo devuelve a esta misma pantalla
     if (!isLogged) {
-      login(); // va a Keycloak y vuelve a esta página
+      guardarSeleccion(eventId, seleccionValida);
+      login();
       return;
     }
+
     setEnviando(true);
+    setErrorReserva(null);
     try {
-      const { requestId } = await api.createReservation(eventId, seleccionado);
-      const label = asientos?.find((s) => s.id === seleccionado)?.label;
-      navigate(`/reservations/${requestId}`, { state: { label } });
+      // El backend responde enseguida (202) con un requestId; el resultado se consulta en la Pantalla 3
+      const { requestId } = await api.createReservation(eventId, seleccionValida);
+      borrarSeleccion(eventId);
+      navigate(`/reservations/${requestId}`, {
+        state: { label: labelSel, eventId, eventName: evento.data?.name },
+      });
     } catch (e) {
-      setError(e as ApiError);
+      setErrorReserva(e as ApiError);
       setEnviando(false);
     }
   };
 
-  if (error?.status === 404) return <p className="mensaje-error">El evento no existe.</p>;
-  if (error) return <p className="mensaje-error">El servicio no está disponible. Reintentá en unos segundos.</p>;
-  if (!asientos) return <p className="cargando">Cargando asientos…</p>;
-
-  const grilla = armarGrilla(asientos, seleccionado);
-  const labelSel = asientos.find((s) => s.id === seleccionado)?.label;
-
   return (
     <section>
       <Link to="/" className="volver">← Volver a eventos</Link>
-      <h2>Elegí tu asiento</h2>
 
-      <div className="escenario">ESCENARIO</div>
+      {evento.data ? (
+        <>
+          <h2>{evento.data.name}</h2>
+          <p className="muted capitalizar">{fechaLarga(evento.data.dateUtc)}</p>
+        </>
+      ) : (
+        <h2>Elegí tu asiento</h2>
+      )}
 
-      {grilla.map((fila) => (
-        <div key={fila.letra} className="fila">
-          <span className="fila-label">{fila.letra}</span>
-          {fila.asientos.map((a) => (
-            <Asiento key={a.label} asiento={a} onSelect={setSeleccionado} />
-          ))}
-        </div>
-      ))}
+      {asientos.loading && <Cargando texto="Cargando asientos..." />}
+      {asientos.error && <ErrorMensaje error={asientos.error} onRetry={asientos.reload} />}
 
-      <div className="leyenda">
-        <span><i className="asiento-mini libre" /> Libre</span>
-        <span><i className="asiento-mini seleccionado" /> Seleccionado</span>
-        <span><i className="asiento-mini ocupado" /> Ocupado</span>
-      </div>
+      {todos && libres && (
+        <>
+          <div className="escenario">ESCENARIO</div>
 
-      {seleccionado && (
-        <div className="card barra-reserva">
-          <span>Asiento <b>{labelSel}</b></span>
-          <button className="btn btn-primary" onClick={reservar} disabled={enviando}>
-            {isLogged ? (enviando ? 'Enviando…' : 'Reservar') : 'Ingresar para reservar'}
-          </button>
-        </div>
+          <div className="sala">
+            {armarGrilla(todos, seleccionValida).map((fila) => (
+              <div key={fila.letra} className="fila">
+                <span className="fila-label">{fila.letra}</span>
+                {fila.asientos.map((a) => (
+                  <Asiento key={a.label} asiento={a} onSelect={elegir} />
+                ))}
+              </div>
+            ))}
+          </div>
+
+          <div className="leyenda">
+            <span><i className="asiento-mini libre" /> Libre</span>
+            <span><i className="asiento-mini seleccionado" /> Seleccionado</span>
+            <span><i className="asiento-mini ocupado" /> Ocupado</span>
+            <button className="btn-link" onClick={asientos.reload}>↻ Actualizar</button>
+          </div>
+
+          {libres.length === 0 && <p className="card vacio">No quedan asientos libres para este evento.</p>}
+          {errorReserva && <ErrorMensaje error={errorReserva} />}
+
+          {seleccionValida ? (
+            <div className="card barra-reserva">
+              <span>Asiento <b>{labelSel}</b></span>
+              <button className="btn btn-primary" onClick={reservar} disabled={enviando}>
+                {!isLogged ? 'Ingresar para reservar' : enviando ? 'Enviando...' : 'Reservar'}
+              </button>
+            </div>
+          ) : (
+            libres.length > 0 && <p className="muted ayuda">Tocá un asiento verde para elegirlo.</p>
+          )}
+        </>
       )}
     </section>
   );
