@@ -8,6 +8,7 @@ namespace Availability.Application.Services;
 public record EventDto(Guid Id, string Name, DateTime DateUtc);
 public record SeatDto(Guid Id, string Label, bool Occupied);
 public record ReservationResultDto(Guid RequestId, string Status, string? Reason);
+public record MyReservationDto(Guid RequestId, Guid EventId, string EventName, DateTime EventDateUtc, string SeatLabel, string Status, string? Reason, DateTime CreatedAtUtc);
 
 // Servicio de aplicación: orquesta los casos de uso. Las reglas viven acá y no en las
 // entidades (dominio anémico).
@@ -106,25 +107,31 @@ public class AvailabilityService
             : new ReservationResultDto(requestId, status.Status, status.Reason);
     }
 
-    // Crea un evento con sus asientos (filas con letra y número: A1, A2... B1...).
-    // La lógica vive acá y no en las entidades (dominio anémico). Devuelve el evento o un mensaje de error.
-    public async Task<(EventDto? Event, string? Error)> CreateEventAsync(
-        string name, DateTime dateUtc, int rows, int seatsPerRow, CancellationToken ct)
+    // Lista las reservas de un usuario en cualquier estado. 
+    public async Task<IReadOnlyList<MyReservationDto>> GetMyReservationsAsync(string userId, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(name)) return (null, "El nombre es obligatorio");
-        if (rows is < 1 or > 26) return (null, "Las filas tienen que ser entre 1 y 26");
-        if (seatsPerRow is < 1 or > 50) return (null, "Los asientos por fila tienen que ser entre 1 y 50");
+        var reservations = await _booking.GetReservationsByUserAsync(userId, ct);
 
-        // Npgsql exige fechas en UTC para este tipo de columna.
-        var date = dateUtc.Kind == DateTimeKind.Local ? dateUtc.ToUniversalTime() : DateTime.SpecifyKind(dateUtc, DateTimeKind.Utc);
-        if (date <= DateTime.UtcNow) return (null, "La fecha tiene que ser futura");
+        // Se consulta una vez por evento distinto (no una vez por reserva).
+        var events = new Dictionary<Guid, Event>();
+        var seatLabels = new Dictionary<Guid, string>();
+        foreach (var eventId in reservations.Select(r => r.EventId).Distinct())
+        {
+            var ev = await _repo.GetEventAsync(eventId, ct);
+            if (ev is null) continue;
+            events[eventId] = ev;
+            foreach (var seat in await _repo.GetSeatsAsync(eventId, ct))
+                seatLabels[seat.Id] = seat.Label;
+        }
 
-        var ev = new Event { Id = Guid.NewGuid(), Name = name.Trim(), DateUtc = date };
-        for (var r = 0; r < rows; r++)
-            for (var n = 1; n <= seatsPerRow; n++)
-                ev.Seats.Add(new Seat { Id = Guid.NewGuid(), EventId = ev.Id, Label = $"{(char)('A' + r)}{n}" });
-
-        await _repo.AddEventAsync(ev, ct);
-        return (new EventDto(ev.Id, ev.Name, ev.DateUtc), null);
-    }
+        return reservations
+            .Select(r =>
+            {
+                events.TryGetValue(r.EventId, out var ev);
+                return new MyReservationDto(r.RequestId, r.EventId, ev?.Name ?? "Evento desconocido",
+                    ev?.DateUtc ?? default, seatLabels.GetValueOrDefault(r.SeatId, "?"),
+                    r.Status, r.Reason, r.CreatedAtUtc);
+            })
+            .ToList();
+    }    
 }

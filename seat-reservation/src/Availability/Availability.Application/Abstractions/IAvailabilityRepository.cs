@@ -10,5 +10,4 @@ public interface IAvailabilityRepository
     Task<Seat?> GetSeatAsync(Guid eventId, Guid seatId, CancellationToken ct);
     Task AddRequestAsync(ReservationRequest request, CancellationToken ct);
     Task<ReservationRequest?> GetRequestAsync(Guid requestId, CancellationToken ct);
-    Task AddEventAsync(Event ev, CancellationToken ct);
 }

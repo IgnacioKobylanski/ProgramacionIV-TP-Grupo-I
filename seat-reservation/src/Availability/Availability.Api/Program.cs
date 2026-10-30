@@ -83,15 +83,6 @@ app.MapGet("/events/{eventId:guid}/seats", async (Guid eventId, AvailabilityServ
     }
 });
 
-// Alta de eventos (la usaría un formulario del frontend). Requiere token.
-app.MapPost("/events", async (CreateEventBody body, AvailabilityService svc, CancellationToken ct) =>
-{
-    var (ev, error) = await svc.CreateEventAsync(body.Name, body.DateUtc, body.Rows, body.SeatsPerRow, ct);
-    return ev is null
-        ? Results.BadRequest(new { error })
-        : Results.Created($"/events/{ev.Id}/seats", ev);
-}).RequireAuthorization();
-
 // Para reservar hace falta un token (punto 2 del flujo). Responde 202: aceptada, no terminada.
 app.MapPost("/reservations", async (ReservationRequestBody body, HttpContext http,
     AvailabilityService svc, CancellationToken ct) =>
@@ -124,6 +115,24 @@ app.MapGet("/reservations/{requestId:guid}", async (Guid requestId, HttpContext 
     {
         var result = await svc.GetResultAsync(requestId, userId, ct);
         return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+    catch (HttpRequestException)
+    {
+        // Booking no responde: lo informamos en lugar de un error genérico.
+        return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+    }
+}).RequireAuthorization();
+
+
+// Lista las reservas solo del usuario autenticado. El userId sale del token (UserIdOf)
+app.MapGet("/reservations/mine", async (HttpContext http, AvailabilityService svc, CancellationToken ct) =>
+{
+    var userId = UserIdOf(http.User);
+    if (userId is null) return Results.Unauthorized();
+
+    try
+    {
+        return Results.Ok(await svc.GetMyReservationsAsync(userId, ct));
     }
     catch (HttpRequestException)
     {

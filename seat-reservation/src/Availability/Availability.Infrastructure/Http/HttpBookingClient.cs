@@ -27,4 +27,10 @@ public class HttpBookingClient : IBookingClient
 
     public async Task<IReadOnlyList<Guid>> GetOccupiedSeatIdsAsync(Guid eventId, CancellationToken ct) =>
     await _http.GetFromJsonAsync<List<Guid>>($"events/{eventId}/occupied-seats", ct) ?? new List<Guid>();
+
+
+    // El userId va en la URL.
+    public async Task<IReadOnlyList<BookingReservation>> GetReservationsByUserAsync(string userId, CancellationToken ct) =>
+        await _http.GetFromJsonAsync<List<BookingReservation>>(
+            $"reservations?userId={Uri.EscapeDataString(userId)}", ct) ?? new List<BookingReservation>();
 }

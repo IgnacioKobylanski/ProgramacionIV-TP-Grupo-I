@@ -73,4 +73,8 @@ app.MapGet("/reservations/{requestId:guid}", async (Guid requestId, ReservationS
 app.MapGet("/events/{eventId:guid}/occupied-seats", async (Guid eventId, ReservationService svc, CancellationToken ct) =>
     Results.Ok(await svc.GetOccupiedSeatsAsync(eventId, ct))).RequireAuthorization("AvailabilityOnly");
 
+
+// Availability pregunta qué reservas tiene un usuario
+app.MapGet("/reservations", async (string userId, ReservationService svc, CancellationToken ct) =>
+    Results.Ok(await svc.GetByUserAsync(userId, ct))).RequireAuthorization("AvailabilityOnly");
 app.Run();

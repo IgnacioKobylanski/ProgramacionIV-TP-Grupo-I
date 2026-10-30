@@ -15,6 +15,9 @@ public class BookingRules
 public record ReservationStatusDto(Guid RequestId, Guid ReservationId, string Status,
     string? Reason, DateTime ExpiresAtUtc);
 
+public record UserReservationDto(Guid RequestId, Guid EventId, Guid SeatId,
+    string Status, string? Reason, DateTime CreatedAtUtc);    
+
 public class ReservationService
 {
     private readonly IReservationRepository _repo;
@@ -143,4 +146,13 @@ public class ReservationService
             ExpiresAtUtc = now + _rules.HoldDuration
         };
     }
+
+    public async Task<IReadOnlyList<UserReservationDto>> GetByUserAsync(string userId, CancellationToken ct)
+    {
+        var reservations = await _repo.GetByUserIdAsync(userId, ct);
+        return reservations
+            .Select(r => new UserReservationDto(r.RequestId, r.EventId, r.SeatId,
+                r.Status.ToString(), r.Reason?.ToString(), r.CreatedAtUtc))
+            .ToList();
+    }    
 }

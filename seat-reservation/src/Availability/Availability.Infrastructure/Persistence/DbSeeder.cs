@@ -12,9 +12,9 @@ public static class DbSeeder
 
     private static readonly SeedEvent[] Events =
     [
-        new(DemoEventId, 0, "Recital de prueba", 30, ["A", "B"], 10),
-        new(Guid.Parse("22222222-2222-2222-2222-222222222222"), 1, "Conferencia de tecnología", 45, ["A", "B", "C"], 8),
-        new(Guid.Parse("33333333-3333-3333-3333-333333333333"), 2, "Obra de teatro", 60, ["A", "B", "C", "D"], 6),
+        new(DemoEventId, 0, "Recital Mercedes Sosa", 30, ["A", "B"], 10),
+        new(Guid.Parse("22222222-2222-2222-2222-222222222222"), 1, "TecWeek 2026", 45, ["A", "B", "C"], 8),
+        new(Guid.Parse("33333333-3333-3333-3333-333333333333"), 2, "Teatro: Esperando a Godot", 60, ["A", "B", "C", "D"], 6),
     ];
 
     public static async Task InitializeAsync(AvailabilityDbContext db)

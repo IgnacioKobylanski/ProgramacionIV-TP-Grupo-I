@@ -19,6 +19,7 @@ public interface IReservationRepository
         RejectionReason? reason, CancellationToken ct);
     Task<int> ExpireOverdueAsync(DateTime nowUtc, CancellationToken ct);
     Task<IReadOnlyList<Guid>> GetOccupiedSeatIdsAsync(Guid eventId, CancellationToken ct);
+    Task<IReadOnlyList<Reservation>> GetByUserIdAsync(string userId, CancellationToken ct);
 }
 
 public class ReservationRepository : IReservationRepository
@@ -77,4 +78,13 @@ public class ReservationRepository : IReservationRepository
                         (r.Status == ReservationStatus.Retenida || r.Status == ReservationStatus.Confirmada))
             .Select(r => r.SeatId)
             .ToListAsync(ct);
+
+    //Filtra asientos reservados por UserId
+    public async Task<IReadOnlyList<Reservation>> GetByUserIdAsync(string userId, CancellationToken ct) =>
+        await _db.Reservations.AsNoTracking()
+            .Where(r => r.UserId == userId)
+            .OrderByDescending(r => r.CreatedAtUtc)
+            .ToListAsync(ct);
+
+
 }
