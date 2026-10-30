@@ -43,6 +43,19 @@ export interface SeatApi {
   getSeats(eventId: string): Promise<SeatDto[]>;
   createReservation(eventId: string, seatId: string): Promise<ReservationCreated>;
   getReservation(requestId: string): Promise<ReservationResult>;
+  getMyReservations(): Promise<MyReservation[]>;
+}
+
+// Reserva de un usuario, como la devuelve GET /reservations/mine (ver MyReservationDto en AvailabilityService.cs).
+export interface MyReservation {
+  requestId: string;
+  eventId: string;
+  eventName: string;
+  eventDateUtc: string; // texto ISO; convertir con new Date(...)
+  seatLabel: string;    // "A1" … "B10"
+  status: ReservationStatus;
+  reason: RejectionReason | null;
+  createdAtUtc: string;
 }
 
 export const FINAL_STATUSES: ReservationStatus[] = ['Confirmada', 'Rechazada', 'Vencida'];

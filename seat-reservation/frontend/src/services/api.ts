@@ -4,6 +4,7 @@ import { API_URL } from '../config';
 import type {
   ApiError,
   EventDto,
+  MyReservation,
   ReservationCreated,
   ReservationResult,
   SeatApi,
@@ -63,4 +64,7 @@ export const realApi: SeatApi = {
     ),
 
   getReservation: (requestId) => request<ReservationResult>(`/reservations/${requestId}`, {}, true),
+
+  getMyReservations: () => request<MyReservation[]>('/reservations/mine', {}, true),  
+
 };
