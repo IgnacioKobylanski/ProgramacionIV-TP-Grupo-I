@@ -1,4 +1,4 @@
-# Documentación de Testing - Seat Reservation
+# Documentación de Testing - Backend - Seat Reservation
 
 ## Criterio de documentación
 
@@ -300,53 +300,24 @@ Permite comprobar que el contrato HTTP de la API está correctamente definido.
 
 # B. Reglas de negocio
 
-## 9. Crear una reserva sobre un asiento disponible
-
-**Qué se prueba:**  
-Comprobar que una reserva pueda realizarse correctamente cuando el asiento se encuentra disponible.
-
-**Resultado esperado:**  
-La reserva debe crearse correctamente y el asiento debe quedar asociado a la reserva.
-
-**Problema que permite detectar:**  
-Fallos en la lógica principal de reservas.
-
-**Importancia:**  
-Es uno de los flujos principales del sistema.
-
-**Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones / errores encontrados:**  
-> [Completar]
-
-**Corrección realizada:**  
-> [Completar / No aplica]
-
-**Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
-
-**Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+En este bloque se evaluaron las reglas de negocio relacionadas con la creación y procesamiento de reservas.
+Las reservas son asincrónicas: POST /reservations responde 202 Accepted y el resultado final (Confirmada, Rechazada o Vencida) se consulta después en GET /reservations/{requestId}.
 
 ---
 
-## 10. Intentar reservar un asiento ya reservado
+### Prueba 9 - Reservar un asiento libre
 
 **Qué se prueba:**  
-Intentar crear una segunda reserva para un asiento que ya fue reservado.
+Crear una reserva utilizando un asiento que se encuentra disponible.
 
 **Resultado esperado:**  
-El sistema debe impedir la segunda reserva.
+El endpoint `POST` responde con **202 Accepted**. La reserva se procesa de forma asincrónica y posteriormente alcanza el estado **`Confirmada`**. El asiento utilizado debe quedar en estado **ocupado**.
 
 **Problema que permite detectar:**  
-Fallas en las reglas de negocio que permiten reservas duplicadas.
+Permite detectar problemas en la creación y procesamiento de reservas, así como inconsistencias entre el estado de la reserva y el estado final del asiento.
 
 **Importancia:**  
-Evita que un mismo asiento sea asignado a más de una persona.
+Es la validación principal del flujo de reserva y sirve como base para varias de las pruebas posteriores.
 
 **Resultado inicial:**  
 > [PASS / FAIL / REVISAR]
@@ -362,25 +333,24 @@ Evita que un mismo asiento sea asignado a más de una persona.
 
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
 
 ---
 
-## 11. Reservar un asiento perteneciente a otro evento
+### Prueba 10 - Reservar un asiento ya reservado
 
 **Qué se prueba:**  
-Intentar utilizar un asiento que no corresponde al evento seleccionado.
+Intentar reservar un asiento que ya fue reservado previamente.
 
 **Resultado esperado:**  
-La operación debe ser rechazada.
+El `POST` no necesariamente devuelve un `409 Conflict` de forma inmediata. El sistema responde **202 Accepted** y la reserva debe ser procesada posteriormente hasta alcanzar el estado **`Rechazada`**, con motivo **`AsientoOcupado`**.
+
+La primera reserva debe permanecer **`Confirmada`** y no debe ser reemplazada ni modificada por la segunda solicitud.
 
 **Problema que permite detectar:**  
-Inconsistencias entre las relaciones de eventos, asientos y reservas.
+Permite detectar dobles reservas o situaciones en las que una nueva solicitud pueda modificar o pisar una reserva existente.
 
 **Importancia:**  
-Garantiza la integridad de los datos.
+Es una prueba fundamental para verificar la integridad de la disponibilidad de los asientos.
 
 **Resultado inicial:**  
 > [PASS / FAIL / REVISAR]
@@ -396,25 +366,22 @@ Garantiza la integridad de los datos.
 
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
 
 ---
 
-## 12. Cancelar una reserva válida
+### Prueba 11 - Varios asientos en solicitudes consecutivas
 
 **Qué se prueba:**  
-Cancelar una reserva existente.
+Verificar la posibilidad de reservar varios asientos mediante solicitudes individuales consecutivas.
 
 **Resultado esperado:**  
-La reserva debe cambiar al estado correspondiente y el asiento debe quedar disponible según las reglas del sistema.
+Las tres solicitudes responden con **202 Accepted** y cada reserva alcanza posteriormente el estado **`Confirmada`**. Los tres asientos deben quedar ocupados.
 
 **Problema que permite detectar:**  
-Errores en la lógica de cancelación o actualización de estados.
+Permite detectar problemas en la creación de múltiples reservas consecutivas o inconsistencias en la actualización del estado de los asientos.
 
 **Importancia:**  
-La cancelación forma parte del ciclo de vida de una reserva.
+Permite comprobar el comportamiento del sistema cuando un usuario necesita reservar varios asientos, aunque la API no disponga de una operación por lote.
 
 **Resultado inicial:**  
 > [PASS / FAIL / REVISAR]
@@ -430,25 +397,24 @@ La cancelación forma parte del ciclo de vida de una reserva.
 
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
 
 ---
 
-## 13. Cancelar una reserva inexistente
+### Prueba 12 - Mismo asiento reservado dos veces
 
 **Qué se prueba:**  
-Intentar cancelar una reserva que no existe.
+Intentar reservar dos veces el mismo asiento utilizando el mismo usuario.
 
 **Resultado esperado:**  
-El backend debe rechazar la operación de manera controlada.
+Una de las reservas debe alcanzar el estado **`Confirmada`** y la segunda debe alcanzar el estado **`Rechazada`**.
+
+Si ambas reservas alcanzaran el estado `Confirmada`, existiría una posible situación de **doble reserva**, lo que representaría un error grave de integridad del sistema.
 
 **Problema que permite detectar:**  
-Manejo incorrecto de recursos inexistentes.
+Permite detectar la posibilidad de generar dos reservas confirmadas para un mismo asiento.
 
 **Importancia:**  
-Evita errores inesperados durante operaciones de cancelación.
+Es una prueba crítica para verificar que las reglas de disponibilidad se mantengan incluso ante solicitudes repetidas sobre el mismo recurso.
 
 **Resultado inicial:**  
 > [PASS / FAIL / REVISAR]
@@ -464,25 +430,35 @@ Evita errores inesperados durante operaciones de cancelación.
 
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
 
 ---
 
-## 14. Modificar una reserva que no corresponde al usuario
+### Prueba 13 - Evento pasado o inexistente
 
 **Qué se prueba:**  
-Intentar modificar una reserva perteneciente a otro usuario.
+Validar el comportamiento del backend frente a diferentes situaciones relacionadas con eventos y asientos.
+
+La prueba cubre las siguientes variantes:
+
+- **13a:** Evento inexistente.
+- **13b:** Asiento inexistente.
+- **13c:** Asiento perteneciente a otro evento.
+- **13d:** Intentar reservar en un evento cuya fecha ya pasó.
+- **13e:** Crear un evento con fecha pasada.
+- **13f:** Crear un evento con nombre vacío.
+- **13g:** Crear un evento con 27 filas.
+- **13h:** Crear un evento con 0 asientos.
 
 **Resultado esperado:**  
-La operación debe ser rechazada.
+Las variantes relacionadas con datos inexistentes o inválidos deben ser rechazadas por el backend, esperando respuestas **400 Bad Request** o **404 Not Found**, según corresponda al caso.
+
+En particular, la variante **13d** debe verificar que una reserva no pueda realizarse sobre un evento que ya finalizó.
 
 **Problema que permite detectar:**  
-Fallos en las reglas de autorización y propiedad de las reservas.
+Permite detectar validaciones incompletas sobre eventos, asientos y relaciones entre recursos, además de posibles inconsistencias relacionadas con fechas y datos inválidos.
 
 **Importancia:**  
-Protege la integridad de las reservas de otros usuarios.
+Permite verificar que las reglas de negocio se apliquen correctamente más allá del caso de reserva de un asiento disponible.
 
 **Resultado inicial:**  
 > [PASS / FAIL / REVISAR]
@@ -498,83 +474,12 @@ Protege la integridad de las reservas de otros usuarios.
 
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
-
----
-
-## 15. Realizar operaciones sobre una reserva en un estado no permitido
-
-**Qué se prueba:**  
-Intentar realizar una operación que no corresponde al estado actual de la reserva.
-
-**Resultado esperado:**  
-El sistema debe impedir la operación.
-
-**Problema que permite detectar:**  
-Transiciones de estado incorrectas.
-
-**Importancia:**  
-Garantiza que el ciclo de vida de una reserva respete las reglas del sistema.
-
-**Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones / errores encontrados:**  
-> [Completar]
-
-**Corrección realizada:**  
-> [Completar / No aplica]
-
-**Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
-
-**Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
-
----
-
-## 16. Crear reservas con datos válidos pero inconsistentes
-
-**Qué se prueba:**  
-Enviar información individualmente válida pero que no sea consistente entre sí.
-
-**Resultado esperado:**  
-El backend debe validar también la coherencia entre los datos.
-
-**Problema que permite detectar:**  
-Validaciones únicamente a nivel de campo.
-
-**Importancia:**  
-Evita registros válidos sintácticamente pero incorrectos desde el punto de vista del negocio.
-
-**Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones / errores encontrados:**  
-> [Completar]
-
-**Corrección realizada:**  
-> [Completar / No aplica]
-
-**Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
-
-**Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
 
 ---
 
 # C. Estados y flujo asincrónico
 
-## 17. Consultar una reserva inmediatamente después de crearla
+## 14. Consultar una reserva inmediatamente después de crearla
 
 **Qué se prueba:**  
 Crear una reserva y consultar su estado inmediatamente después.
@@ -608,7 +513,7 @@ Permite comprobar la consistencia del sistema después de una operación.
 
 ---
 
-## 18. Consultar una reserva mientras se procesa
+## 15. Consultar una reserva mientras se procesa
 
 **Qué se prueba:**  
 Consultar una reserva durante un proceso asincrónico.
@@ -642,7 +547,7 @@ Permite comprobar el comportamiento del sistema durante procesos que no son inst
 
 ---
 
-## 19. Reintentar una operación asincrónica
+## 16. Reintentar una operación asincrónica
 
 **Qué se prueba:**  
 Repetir una solicitud mientras una operación anterior todavía está siendo procesada.
@@ -676,7 +581,7 @@ Los reintentos son habituales en sistemas distribuidos.
 
 ---
 
-## 20. Verificar estados inconsistentes
+## 17. Verificar estados inconsistentes
 
 **Qué se prueba:**  
 Comprobar que el estado de la reserva y el estado del asiento permanezcan sincronizados.
@@ -712,7 +617,7 @@ Evita situaciones donde el sistema muestre información contradictoria.
 
 # D. Concurrencia
 
-## 21. Dos usuarios reservando el mismo asiento simultáneamente
+## 18. Dos usuarios reservando el mismo asiento simultáneamente
 
 **Qué se prueba:**  
 Enviar dos solicitudes de reserva para el mismo asiento al mismo tiempo.
@@ -746,7 +651,7 @@ Es fundamental en un sistema de reservas.
 
 ---
 
-## 22. Múltiples solicitudes simultáneas sobre un mismo asiento
+## 19. Múltiples solicitudes simultáneas sobre un mismo asiento
 
 **Qué se prueba:**  
 Enviar varias solicitudes concurrentes para reservar el mismo asiento.
@@ -780,7 +685,7 @@ Permite evaluar el comportamiento bajo alta competencia por un recurso.
 
 ---
 
-## 23. Crear reservas simultáneas para diferentes asientos
+## 20. Crear reservas simultáneas para diferentes asientos
 
 **Qué se prueba:**  
 Enviar múltiples reservas simultáneas sobre asientos diferentes.
@@ -814,7 +719,7 @@ Permite evaluar el comportamiento del sistema bajo carga concurrente.
 
 ---
 
-## 24. Repetir solicitudes concurrentes del mismo usuario
+## 21. Repetir solicitudes concurrentes del mismo usuario
 
 **Qué se prueba:**  
 Enviar varias solicitudes simultáneas equivalentes desde un mismo usuario.
@@ -850,7 +755,7 @@ Permite detectar problemas producidos por múltiples clics, reintentos o solicit
 
 # E. Microservicios y tolerancia a fallos
 
-## 25. Fallo del servicio encargado de reservas
+## 22. Fallo del servicio encargado de reservas
 
 **Qué se prueba:**  
 Simular o provocar la indisponibilidad del servicio relacionado con las reservas.
@@ -884,7 +789,7 @@ Permite comprobar la resiliencia del sistema.
 
 ---
 
-## 26. Fallo de un servicio dependiente
+## 23. Fallo de un servicio dependiente
 
 **Qué se prueba:**  
 Simular un fallo en uno de los servicios de los que depende la operación.
@@ -918,7 +823,7 @@ Los servicios distribuidos deben contemplar la posibilidad de que una dependenci
 
 ---
 
-## 27. Timeout de un microservicio
+## 24. Timeout de un microservicio
 
 **Qué se prueba:**  
 Simular una respuesta demasiado lenta de un servicio dependiente.
@@ -952,7 +857,7 @@ Evita que una dependencia lenta afecte indefinidamente al sistema.
 
 ---
 
-## 28. Respuesta inválida de un servicio dependiente
+## 25. Respuesta inválida de un servicio dependiente
 
 **Qué se prueba:**  
 Simular que un servicio dependiente devuelve una respuesta inesperada o inválida.
@@ -986,7 +891,7 @@ Los microservicios deben validar la información recibida de sus dependencias.
 
 ---
 
-## 29. Recuperación después de un fallo
+## 26. Recuperación después de un fallo
 
 **Qué se prueba:**  
 Comprobar el comportamiento del sistema después de que un servicio vuelva a estar disponible.
@@ -1022,7 +927,7 @@ Permite evaluar la resiliencia del sistema frente a fallos temporales.
 
 # F. Seguridad y manejo de datos
 
-## 30. Validación de autenticación, autorización y datos maliciosos
+## 27. Validación de autenticación, autorización y datos maliciosos
 
 **Qué se prueba:**  
 Comprobar el acceso al backend utilizando diferentes condiciones de autenticación y datos potencialmente maliciosos.
@@ -1087,4 +992,4 @@ Esta sección permite tener una vista general de los errores encontrados durante
 | D | Concurrencia | 4 | [ ] | [ ] | [ ] |
 | E | Microservicios y tolerancia a fallos | 5 | [ ] | [ ] | [ ] |
 | F | Seguridad y manejo de datos | 1 | [ ] | [ ] | [ ] |
-| **Total** | | **30** | **6** | **[ ]** | **2** |
+| **Total** | | **27** | **6** | **[ ]** | **2** |

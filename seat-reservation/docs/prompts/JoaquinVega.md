@@ -73,7 +73,7 @@ El script implementa los ocho casos de prueba definidos para este bloque y permi
 
 ---
 
-# Prompt 3 - Solicitud de documentación de los tests
+# Prompt 3: Solicitud de documentación de los tests
 
 **Objetivo del prompt:**
 
@@ -107,17 +107,34 @@ Se generó el archivo:
 Este archivo contiene la documentación de los casos de prueba del backend de **Seat Reservation**, incluyendo los resultados obtenidos, los errores encontrados, las correcciones aplicadas y los re-tests correspondientes.
 
 ---
+## Prompt 4: Generación de scripts para el Bloque B
+
+**Prompt utilizado:**
+
+> Generame los scripts necesarios para poder realizar las pruebas correspondientes al **Bloque B: Reglas de negocio** sobre el backend.
+>
+> Las pruebas a cubrir son:
+>
+> 9. Reservar un asiento libre.
+> 10. Reservar un asiento ya reservado.
+> 11. Varios asientos en solicitudes consecutivas.
+> 12. Mismo asiento reservado dos veces.
+> 13. Evento pasado o inexistente.
+>
+> Los scripts deben permitir ejecutar cada prueba de forma clara y reproducible y registrar el resultado obtenido para poder documentarlo posteriormente.
+
+### Resultado
+
+Se generó el script:
+
+**`tests_back_bloque_B.py`**
+
+El script contiene las pruebas correspondientes al Bloque B y permite ejecutarlas individualmente o en conjunto.
 
 # Próximos prompts
 
 Para cada bloque restante se generará un prompt específico destinado a obtener los scripts necesarios para ejecutar las pruebas correspondientes.
 
-## Bloque B
-
-> [Agregar aquí el prompt utilizado para generar los scripts del bloque B]
-
-**Script generado:**  
-> [Nombre del archivo]
 
 ## Bloque C
 
