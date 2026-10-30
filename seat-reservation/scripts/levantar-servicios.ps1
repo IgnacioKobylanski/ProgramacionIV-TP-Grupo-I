@@ -1,5 +1,5 @@
 # Abre una ventana por servicio (modo "dotnet run"). Uso, desde seat-reservation:
-#   docker compose up -d postgres keycloak
+#   docker compose up -d postgres keycloak rabbitmq
 #   powershell -ExecutionPolicy Bypass -File ./scripts/levantar-servicios.ps1
 $servicios = @(
     @{ Nombre = "Payment";       Proyecto = "src/Payment/Payment.Grpc";          Url = "http://localhost:5003" },

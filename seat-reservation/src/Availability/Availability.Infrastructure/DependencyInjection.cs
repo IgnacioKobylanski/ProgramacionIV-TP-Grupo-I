@@ -11,8 +11,10 @@ namespace Availability.Infrastructure;
 public class InfrastructureOptions
 {
     public string Database { get; set; } = string.Empty;
-    public string ServiceBusConnectionString { get; set; } = string.Empty;
-    public string ServiceBusTopic { get; set; } = string.Empty;
+    public string RabbitMqHost { get; set; } = "localhost";
+    public int RabbitMqPort { get; set; } = 5672;
+    public string RabbitMqUser { get; set; } = "app";
+    public string RabbitMqPassword { get; set; } = "app";
     public string BookingBaseUrl { get; set; } = string.Empty;
 }
 
@@ -24,9 +26,9 @@ public static class DependencyInjection
         services.AddDbContext<AvailabilityDbContext>(opt => opt.UseNpgsql(o.Database));
         services.AddScoped<IAvailabilityRepository, EfAvailabilityRepository>();
 
-        // El cliente de Service Bus está pensado para vivir toda la aplicación: singleton.
+        // La conexión al broker está pensada para vivir toda la aplicación: singleton.
         services.AddSingleton<IReservationPublisher>(_ =>
-            new ServiceBusReservationPublisher(o.ServiceBusConnectionString, o.ServiceBusTopic));
+            new RabbitMqReservationPublisher(o.RabbitMqHost, o.RabbitMqPort, o.RabbitMqUser, o.RabbitMqPassword));
 
         services.AddHttpClient<IBookingClient, HttpBookingClient>(c => c.BaseAddress = new Uri(o.BookingBaseUrl))
          .AddHttpMessageHandler<ServiceTokenHandler>();

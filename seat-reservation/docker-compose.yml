@@ -1,17 +1,16 @@
-# Infraestructura (PostgreSQL y Keycloak) y los cuatro servicios.
-# Credenciales de DESARROLLO local: no hay datos reales.
-# El connection string de Azure NO está en este archivo: se guarda con "dotnet user-secrets"
-# y se monta (solo lectura) en los contenedores que lo necesitan.
+# Infraestructura (PostgreSQL, Keycloak y RabbitMQ) y los cuatro servicios.
+# Credenciales de DESARROLLO local: no hay datos reales ni secretos que cargar.
 
 # Configuración común de validación de tokens: los servicios consultan a Keycloak por la red interna.
 x-auth-env: &auth-env
   Auth__Authority: http://keycloak:8080/realms/seat-reservation
   Auth__RequireHttpsMetadata: "false"
 
-# Carpeta de user-secrets de la máquina. En Windows es %APPDATA%\Microsoft\UserSecrets;
-# en Mac o Linux, definir USER_SECRETS_DIR=$HOME/.microsoft/usersecrets antes de levantar.
-x-user-secrets: &user-secrets
-  - ${USER_SECRETS_DIR:-${APPDATA}/Microsoft/UserSecrets}:/root/.microsoft/usersecrets:ro
+# Conexión al broker por la red interna (credenciales de desarrollo).
+x-rabbit-env: &rabbit-env
+  RabbitMq__Host: rabbitmq
+  RabbitMq__User: app
+  RabbitMq__Password: app
 
 services:
   postgres:
@@ -29,6 +28,22 @@ services:
       test: ["CMD-SHELL", "pg_isready -U app -d postgres"]
       interval: 5s
       timeout: 3s
+      retries: 12
+
+  # Broker de mensajes. Panel de administración en http://localhost:15672 (usuario app, clave app).
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: sr-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: app
+      RABBITMQ_DEFAULT_PASS: app
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
       retries: 12
 
   keycloak:
@@ -57,15 +72,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: on-failure
     ports:
       - "127.0.0.1:5001:8080"
-    volumes: *user-secrets
     environment:
-      <<: *auth-env
-      ASPNETCORE_ENVIRONMENT: Development   # necesario para que .NET lea los user-secrets
+      <<: [*auth-env, *rabbit-env]
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Availability: Host=postgres;Port=5432;Database=availability;Username=app;Password=app
-      ServiceBus__TopicName: grupo1-booking-topic
       Booking__BaseUrl: http://booking:8080/
       ServiceAuth__TokenEndpoint: http://keycloak:8080/realms/seat-reservation/protocol/openid-connect/token
       ServiceAuth__ClientId: availability-service
@@ -80,19 +95,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: on-failure
-    # Dos réplicas: las dos leen de la MISMA suscripción y el broker entrega cada mensaje a una sola.
+    # Dos réplicas: las dos consumen de la MISMA cola y el broker entrega cada mensaje a una sola.
     deploy:
       replicas: 2
     ports:
       - "127.0.0.1:5002-5003:8080"
-    volumes: *user-secrets
     environment:
-      <<: *auth-env
-      ASPNETCORE_ENVIRONMENT: Development   # necesario para que .NET lea los user-secrets
+      <<: [*auth-env, *rabbit-env]
+      ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Booking: Host=postgres;Port=5432;Database=booking;Username=app;Password=app
-      ServiceBus__TopicName: grupo1-booking-topic
-      ServiceBus__SubscriptionName: booking
       Payment__Address: http://payment:8080
       Notifications__BaseUrl: http://notifications:8080/
       ServiceAuth__TokenEndpoint: http://keycloak:8080/realms/seat-reservation/protocol/openid-connect/token
@@ -130,12 +144,11 @@ services:
       <<: *auth-env
       ConnectionStrings__Notifications: Host=postgres;Port=5432;Database=notifications;Username=app;Password=app
 
-  frontend:
-    build: ./frontend
-    container_name: sr-frontend
-    ports:
-      - "127.0.0.1:3000:80"
-
+  # frontend:
+  #   build: ./frontend
+  #   container_name: sr-frontend
+  #   ports:
+  #     - "127.0.0.1:3000:80"
 
 volumes:
   pgdata:

@@ -3,22 +3,19 @@ using Availability.Api;
 using Availability.Application.Services;
 using Availability.Infrastructure;
 using Availability.Infrastructure.Persistence;
-using Azure.Messaging.ServiceBus;
+using Availability.Application.Abstractions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using ServiceAuth;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var serviceBusConnection = builder.Configuration["ServiceBus:ConnectionString"];
-if (string.IsNullOrWhiteSpace(serviceBusConnection))
-    throw new InvalidOperationException(
-        "Falta ServiceBus:ConnectionString. Configurala con user-secrets (ver README).");
-
 builder.Services.AddInfrastructure(new InfrastructureOptions
 {
     Database = builder.Configuration.GetConnectionString("Availability")!,
-    ServiceBusConnectionString = serviceBusConnection,
-    ServiceBusTopic = builder.Configuration["ServiceBus:TopicName"]!,
+    RabbitMqHost = builder.Configuration["RabbitMq:Host"] ?? "localhost",
+    RabbitMqPort = builder.Configuration.GetValue("RabbitMq:Port", 5672),
+    RabbitMqUser = builder.Configuration["RabbitMq:User"] ?? "app",
+    RabbitMqPassword = builder.Configuration["RabbitMq:Password"] ?? "app",
     BookingBaseUrl = builder.Configuration["Booking:BaseUrl"]!
 });
 builder.Services.AddScoped<AvailabilityService>();
@@ -110,7 +107,7 @@ app.MapPost("/reservations", async (ReservationRequestBody body, HttpContext htt
             ? Results.NotFound(new { error = "El asiento no existe para ese evento" })
             : Results.Accepted($"/reservations/{requestId}", new { requestId, correlationId });
     }
-    catch (ServiceBusException)
+    catch (BrokerUnavailableException)
     {
         return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
     }
