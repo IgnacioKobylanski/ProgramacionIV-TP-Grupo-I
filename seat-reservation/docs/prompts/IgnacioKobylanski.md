@@ -86,3 +86,8 @@ infraestructura local (Docker) y Availability (Clean Architecture).
 - Prompts: Le pedi que agregue dos eventos mas en el seeder y me pasara el codigo necesario para las clases para poder sumar 2 eventos mas.
 - Qué se usó: tres eventos sembrados de forma idempotente.
 - Mi aporte: aplique los cambios necesesarios, levante la app para ver que no habia problemas.
+
+## 18. Crear un script para cargar las credenciales de Google.
+- Prompts: Le pedi que cree un script que permita cargar las credenciales de google de manera mas facil.
+- Qué se usó: un script.
+- Mi aporte: cree el archivo y use el codigo proporcionado.
