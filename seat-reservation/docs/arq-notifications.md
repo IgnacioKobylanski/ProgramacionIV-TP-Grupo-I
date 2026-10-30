@@ -4,7 +4,7 @@
 
 Notifications es un microservicio implementado como una API REST mínima en .NET 10. Su responsabilidad es registrar y simular el envío de notificaciones cuando Booking confirma una reserva.
 
-Booking se comunica directamente con Notifications mediante HTTP, sin utilizar Azure Service Bus para este tramo del proceso.
+Booking se comunica directamente con Notifications mediante HTTP, sin utilizar RabbitMQ para este tramo del proceso.
 
 ## Diagrama de arquitectura
 
@@ -69,17 +69,19 @@ La entidad `Notification` contiene los siguientes campos:
 
 Se utiliza Entity Framework Core para la persistencia. La base de datos establece un índice único sobre `ReservationId` para evitar duplicados y limita el campo `Message` a 500 caracteres.
 
-## Decisión arquitectónica
+## Relación con el broker RabbitMQ
 
-Se utiliza comunicación HTTP directa entre Booking y Notifications porque el servicio de notificaciones no forma parte del flujo del broker especificado en el diagrama oficial.
+Notifications se comunica directamente con Booking mediante HTTP, sin intervenir en la mensajería de RabbitMQ. El broker se utiliza para la comunicación asíncrona entre Availability y Booking.
+## Decisión arquitectónica
+Se utiliza comunicación HTTP directa entre Booking y Notifications, manteniendo este servicio independiente del flujo de mensajería asíncrona entre Availability y Booking.
 
 Esta decisión simplifica la implementación y las pruebas, evitando incorporar otra cola de mensajes.
 
-Azure Service Bus continúa utilizándose en el flujo de solicitudes de reserva entre Availability y Booking.
+RabbitMQ se utiliza en el flujo de solicitudes de reserva entre Availability y Booking, mediante el exchange `grupo1-booking` y la cola compartida `booking`. La cola `booking.dead` se reserva para mensajes derivados por el mecanismo de dead-letter. Notifications no consume mensajes de estas colas.
 
 ## Manejo de fallos y limitaciones
 
-Según el comportamiento informado para el flujo completo, una falla de Notifications no impide que Booking confirme la reserva.
+Una falla del servicio Notifications no impide que Booking confirme la reserva, ya que el envío del aviso no condiciona el resultado de la operación.
 
 Sin embargo, la comunicación directa presenta una limitación: si Notifications está fuera de servicio cuando Booking intenta enviar el aviso, la notificación puede perderse.
 
@@ -113,19 +115,4 @@ dotnet run --project src/Notifications/Notifications.csproj --urls http://localh
 
 
 ## Pruebas realizadas
-
-Se realizaron pruebas locales del microservicio Notifications con PostgreSQL.
-
-| Prueba | Resultado |
-|---|---|
-| Inicio de la API en el puerto 5004 | Correcto |
-| Conexión con PostgreSQL | Correcto |
-| Aplicación de migraciones de Entity Framework Core | Correcto |
-| GET /notifications sin registros | Devuelve `[]` |
-| POST /notifications con datos de prueba | Registra la notificación |
-| GET /notifications después del POST | Devuelve el registro creado |
-| POST repetido con el mismo ReservationId | No genera un segundo registro |
-
-La prueba de idempotencia confirmó que repetir una solicitud con el mismo `ReservationId` mantiene una única notificación almacenada para esa reserva.
-
-Estas pruebas verifican el funcionamiento individual de Notifications. La integración completa con Booking y el flujo de reserva quedan pendientes de validación local.
+Las pruebas realizadas verifican el funcionamiento individual del microservicio Notifications, incluyendo la persistencia en PostgreSQL y el control de idempotencia mediante `ReservationId`.
