@@ -29,3 +29,13 @@ Componentes trabajados: Creación iterativa de la documentación principal, diag
 código powershell actualizados que incluyen el uso de Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force.   
 - **Mi aporte:**  Revisé las soluciones de la tabla de problemas frecuentes para garantizar su claridad, como recomendar docker compose down -v si el realm de Keycloak cambia sin reflejarse. También documenté el funcionamiento de las réplicas de Booking en Docker, verificando que los mensajes se repartan 
 en los logs como booking-1 y booking-2.  
+
+## 6. Migración a RabbitMQ, Google OAuth y Reorganización (Final)
+- **Prompts:** "Solicité actualizar el diagrama Mermaid, eliminar las referencias a los scripts de secretos, redactar la nueva configuración de mensajería y estructurar la tabla final de integrantes y responsabilidades."
+- **Qué se usó:** Actualización de sintaxis en el bloque `mermaid` para los nodos del exchange de RabbitMQ. Uso de enlaces Markdown `[texto](ruta)` para indexar la documentación en listas, y creación de tablas Markdown para roles y responsabilidades.
+- **Mi aporte:** Verifiqué la eliminación de las dependencias de Azure en la sección de ejecución para simplificar el despliegue con Docker. Se agregó la advertencia de seguridad sobre no incluir el `Client Secret` de Google en Git, y estructuré la tabla de integrantes asegurándome de plasmar cada responsabilidad.
+
+## 7. Creación del Índice de Navegación
+- **Prompts:** "Solicité la creación de un archivo `README.md` que funcione como un mapa o punto de entrada principal, que incluya una guía de inicio rápido con Docker, una tabla con todas las credenciales de desarrollo y enlaces organizados a toda la documentación, infraestructura y código fuente."
+- **Qué se usó:** Tablas en Markdown para estructurar claramente las credenciales, la documentación y los módulos de código. Enlaces relativos (`[texto](ruta)`) para conectar este índice con el resto de los archivos del repositorio (como `README.md`). Bloques de código `bash` para los comandos de inicio rápido.
+- **Mi aporte:** Estructuré la información teniendo en cuenta un orden lógico (cómo levantar el sistema y las credenciales). Apliqué formato Markdown para jerarquizar los títulos, estructurar el texto y organizar la información en tablas. Además, verifiqué manualmente que todos los puertos descritos (`3000` para frontend, `8081` para Keycloak, `15672` para RabbitMQ) y las rutas de los archivos coincidieran exactamente con la estructura real del repositorio.
