@@ -117,3 +117,35 @@ h2 { margin: 0 0 4px; }
   .asiento { width: 34px; height: 34px; font-size: 10px; }
   .navbar { padding: 12px 16px; }
 }
+
+/* Filtros de reservas */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+
+.filtros button {
+  background: #fff;
+  color: var(--color-primario);
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filtros button:hover {
+  background: #eaf1fb;
+  border-color: var(--color-primario);
+}
+
+.filtros button.active,
+.filtros button.activo {
+  background: var(--color-primario);
+  color: #fff;
+  border-color: var(--color-primario);
+}
