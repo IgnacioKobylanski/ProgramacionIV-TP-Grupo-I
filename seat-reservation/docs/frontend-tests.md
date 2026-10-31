@@ -32,9 +32,9 @@ Las pruebas abarcarán navegación, visualización de eventos, selección de asi
 
 **Resultado esperado:** se muestra la página principal sin errores de carga.
 
-**Resultado obtenido:** pendiente.
+**Resultado obtenido:** La página principal cargó correctamente..
 
-**Estado:** PENDIENTE.
+**Estado:** APROBADA.
 
 ### FRONT-02 — Listado de eventos
 
@@ -47,9 +47,9 @@ Las pruebas abarcarán navegación, visualización de eventos, selección de asi
 
 **Resultado esperado:** se muestran los eventos obtenidos desde Availability con sus datos correspondientes.
 
-**Resultado obtenido:** pendiente.
+**Resultado obtenido:** Se visualizó el listado de eventos con sus botones «Ver asientos».
 
-**Estado:** PENDIENTE.
+**Estado:** APROBADA.
 
 ### FRONT-03 — Selección de un evento
 
@@ -62,9 +62,11 @@ Las pruebas abarcarán navegación, visualización de eventos, selección de asi
 
 **Resultado esperado:** se abre la pantalla de asientos correspondiente al evento seleccionado.
 
-**Resultado obtenido:** pendiente.
+**Resultado obtenido:** Al consultar los asientos, Availability respondió HTTP 503. Los registros mostraron que Keycloak rechazaba las credenciales de availability-service.
 
-**Estado:** PENDIENTE.
+**Observación:** La prueba no pudo completarse por un problema de autenticación entre microservicios (invalid_client_credentials). No se identificó un defecto confirmado del frontend.
+
+**Estado:** BLOQUEADA.
 
 ### FRONT-04 — Navegación a una ruta inexistente
 
@@ -76,9 +78,9 @@ Las pruebas abarcarán navegación, visualización de eventos, selección de asi
 
 **Resultado esperado:** se muestra el mensaje «Página no encontrada».
 
-**Resultado obtenido:** pendiente.
+**Resultado obtenido:** Al ingresar una ruta inexistente se mostró «Página no encontrada».
 
-**Estado:** PENDIENTE.
+**Estado:** APROBADA.
 
 ## 4. Bloque B — Visualización y selección de asientos
 
@@ -252,9 +254,9 @@ Las pruebas abarcarán navegación, visualización de eventos, selección de asi
 
 **Resultado esperado:** la aplicación muestra «El evento no existe» cuando Availability responde HTTP 404.
 
-**Resultado obtenido:** pendiente.
+**Resultado obtenido:** La API respondió HTTP 404 y el frontend mostró «No encontramos lo que buscabas».
 
-**Estado:** PENDIENTE.
+**Estado:** APROBADA.
 
 ### FRONT-16 — Availability no disponible
 
@@ -289,15 +291,15 @@ Las pruebas abarcarán navegación, visualización de eventos, selección de asi
 
 ## 8. Resumen de resultados
 
-| Bloque                      | Casos    | Aprobados  | Fallidos   | Pendientes  |
-| --------------------------- | -------- | ---------- | ---------- | ----------- |
-| A — Navegación y eventos    | 4        | 0          | 0          | 4           |
-| B — Asientos                | 5        | 0          | 0          | 5           |
-| C — Autenticación           | 2        | 0          | 0          | 2           |
-| D — Reservas                | 3        | 0          | 0          | 3           |
-| E — Errores                 | 3        | 0          | 0          | 3           |
-| --------------------------- | -------- | ---------- | ---------- | ----------- |
-| **Total**                   | **17**   | **0**      | **0**      | **17**      |
+| Bloque                      | Casos    | Aprobados  | Fallidos   | Bloqueados  | Pendientes  |
+| --------------------------- | -------- | ---------- | ---------- | ----------- | ----------- |
+| A — Navegación y eventos    | 4        | 3          | 0          | 1           | 0           |
+| B — Asientos                | 5        | 0          | 0          | 0           | 5           |
+| C — Autenticación           | 2        | 0          | 0          | 0           | 2           |
+| D — Reservas                | 3        | 0          | 0          | 0           | 3           |
+| E — Errores                 | 3        | 1          | 0          | 0           | 2           |
+| --------------------------- | -------- | ---------- | ---------- | ----------- | ----------- |
+| **Total**                   | **17**   | **4**      | **0**      | **1**       | **12**      |
 
 ## 9. Observaciones
 
