@@ -38,3 +38,10 @@ Trabajo realizado: análisis de la consigna, la implementación y la arquitectur
 - Qué se usó: el README general y las guías del proyecto, las pantallas y rutas de React, los componentes, hooks y utilidades, el cliente HTTP, la integración con Keycloak, los contratos de Availability, la configuración de Vite y Nginx, las dependencias y Docker Compose.
 - Resultado: se reemplazó el README inicial de la plantilla por una guía en español con requisitos, ejecución con Docker y Vite, puertos, configuración, autenticación, pantallas, flujo de reservas, seguimiento automático, endpoints, estructura, componentes, verificación manual y problemas frecuentes. La documentación refleja el frontend integrado actual y el backend con RabbitMQ; no se modificó el código ni el README general. La revisión se basó en los archivos del proyecto, sin ejecutar pruebas funcionales.
 - Mi aporte: definí que el documento debía explicar el frontend completo y conservar un formato compatible con la documentación del equipo, como primera versión para revisión y ajustes posteriores.
+
+## 6. Actualización del diagrama general y la tabla por el cambio de broker
+
+- Prompts: pedí corregir el diagrama general y la tabla de componentes para reflejar el reemplazo de Azure Service Bus por RabbitMQ.
+- Qué se usó: `docs/diagrama-general.md`, `docs/tabla-componentes.md`, la topología compartida en `src/Contracts/BrokerTopology.cs`, el publicador de Availability, el consumidor de Booking, Docker Compose y la documentación del cambio de broker.
+- Resultado: se actualizaron el gráfico y las explicaciones para representar el exchange `grupo1-booking`, la cola `booking` compartida por las réplicas y el recorrido de mensajes fallidos mediante `grupo1-booking.dlx` y `booking.dead`. La tabla conserva las columnas de componente, rol y justificación. También se precisaron las confirmaciones, la devolución de mensajes a la cola y la zona de consistencia eventual. No se modificó el código ni se ejecutaron pruebas funcionales.
+- Mi aporte: identifiqué que los documentos generales todavía describían el broker anterior y solicité mantenerlos alineados con la implementación actual del equipo.

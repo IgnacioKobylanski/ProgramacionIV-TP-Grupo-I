@@ -11,14 +11,18 @@ flowchart TB
 
     subgraph CE["Consistencia eventual: de la solicitud al procesamiento de la reserva"]
         A["Availability API - Clean Architecture"]
-        subgraph BUS["Azure Service Bus"]
-            T["Topic: grupo1-booking-topic"]
-            S["Suscripción: booking"]
+        subgraph BUS["RabbitMQ local en Docker"]
+            EX["Exchange fanout: grupo1-booking"]
+            Q["Cola: booking"]
+            DLX["Exchange dead-letter: grupo1-booking.dlx"]
+            DQ["Cola de mensajes fallidos: booking.dead"]
+            EX -->|"Enruta a la cola vinculada"| Q
+            Q -.->|"Mensaje ilegible: rechazo sin reencolar"| DLX
+            DLX --> DQ
         end
         B["Booking API y workers - N-Layer"]
-        A -->|"Publica solicitud en JSON"| T
-        T --> S
-        S -->|"Entrega la solicitud"| B
+        A -->|"AMQP: publica solicitud en JSON"| EX
+        Q -->|"AMQP: entrega a una réplica"| B
     end
 
     P["Payment gRPC API - N-Layer"]
@@ -47,15 +51,19 @@ flowchart TB
 
 **Availability** recibe las consultas y solicitudes de reserva. **Booking** determina si puede reservarse el asiento y administra los estados. **Payment** procesa un cobro simulado y **Notifications** registra el aviso de una reserva confirmada y simula su envío mediante un log. **Keycloak** proporciona los tokens utilizados para autenticar a usuarios y servicios.
 
-Availability publica las solicitudes en el topic `grupo1-booking-topic` de Azure Service Bus. Booking las recibe desde la suscripción `booking`. Para consultar ocupación y resultados, Availability también se comunica directamente con Booking por HTTP. Booking llama a Payment por gRPC y a Notifications por HTTP.
+Availability publica las solicitudes en JSON en el exchange de tipo `fanout` `grupo1-booking` de RabbitMQ. Este exchange las enruta a la cola `booking`, que consumen las réplicas de Booking. Para consultar ocupación y resultados, Availability también se comunica directamente con Booking por HTTP. Booking llama a Payment por gRPC y a Notifications por HTTP.
 
-Las cuatro bases (`availability`, `booking`, `payment` y `notifications`) se encuentran en un mismo servidor PostgreSQL. El acceso a los datos se realiza mediante Entity Framework Core y Npgsql. La configuración Docker Compose contempla dos réplicas de Booking que procesan mensajes de la misma suscripción.
+RabbitMQ se ejecuta localmente mediante Docker Compose. Las conexiones de mensajería utilizan el puerto `5672` y su panel de administración está disponible en `http://localhost:15672`. Availability y Booking declaran la misma topología, cuyos nombres se definen en `src/Contracts/BrokerTopology.cs`.
+
+Los exchanges y las colas se declaran durables, y Availability publica mensajes persistentes con confirmación del broker. Booking confirma la recepción del mensaje después de procesarlo; si ocurre una excepción durante el procesamiento, lo devuelve a la cola. Los mensajes que no pueden deserializarse se rechazan sin reencolarlos y RabbitMQ los deriva mediante el exchange `grupo1-booking.dlx` a la cola `booking.dead`. No hay un consumidor de esa cola implementado en el proyecto.
+
+Las cuatro bases (`availability`, `booking`, `payment` y `notifications`) se encuentran en un mismo servidor PostgreSQL. El acceso a los datos se realiza mediante Entity Framework Core y Npgsql. La configuración Docker Compose contempla dos réplicas de Booking que consumen la misma cola `booking`: cada entrega se asigna a un consumidor, aunque un mensaje puede volver a entregarse si no se confirma su procesamiento.
 
 ## 2. Cómo se procesa una reserva
 
 1. **Consulta de asientos.** El cliente consulta los eventos y asientos disponibles a través de Availability. Estas consultas son públicas. Availability obtiene de Booking qué asientos están ocupados.
-2. **Solicitud.** El usuario autenticado solicita un asiento. Availability comprueba que exista y pertenezca al evento, guarda la solicitud y publica un mensaje en Service Bus. Después responde con `202 Accepted` e identificadores para realizar el seguimiento.
-3. **Retención.** Booking consume el mensaje. Si el asiento está libre, crea una reserva `Retenida`. Si ya está ocupado, registra el rechazo. La base de Booking tiene una restricción que evita guardar dos reservas activas para el mismo asiento y evento.
+2. **Solicitud.** El usuario autenticado solicita un asiento. Availability comprueba que exista y pertenezca al evento, guarda la solicitud y publica un mensaje en el exchange `grupo1-booking` de RabbitMQ. Después de la confirmación del broker, responde con `202 Accepted` e identificadores para realizar el seguimiento.
+3. **Retención.** Una réplica de Booking consume el mensaje desde la cola `booking`. Si el asiento está libre, crea una reserva `Retenida`. Si ya está ocupado, registra el rechazo. La base de Booking tiene una restricción que evita guardar dos reservas activas para el mismo asiento y evento.
 4. **Cobro.** Booking solicita a Payment el cobro simulado mediante gRPC. Payment guarda el resultado en su base de datos.
 5. **Confirmación y aviso.** Si se aprueba el pago y la reserva sigue retenida, Booking la cambia a `Confirmada` e intenta enviar el aviso a Notifications. Este servicio guarda el aviso y registra un envío simulado en sus logs. Si el pago falla o no está disponible, Booking puede marcar la reserva como `Rechazada`.
 6. **Seguimiento.** El cliente consulta a Availability para conocer el estado, que se obtiene desde Booking. Si Booking todavía no registró la reserva, Availability responde `EnProceso`.
@@ -65,7 +73,7 @@ Los estados de una reserva son **Retenida, Confirmada, Rechazada y Vencida**. Un
 
 ## 3. Consistencia eventual
 
-La consistencia eventual se encuentra en el recorrido **Availability → Azure Service Bus → Booking**, señalado en el diagrama.
+La consistencia eventual se encuentra en el recorrido **Availability → RabbitMQ (exchange `grupo1-booking` → cola `booking`) → Booking**, señalado en el diagrama.
 
 Availability guarda la solicitud y envía un mensaje, mientras que Booking la procesa posteriormente. Por eso puede existir un intervalo en el que Availability ya conoce la solicitud, pero Booking todavía no registró su resultado. El cliente recibe inicialmente una confirmación de recepción (`202 Accepted`) y consulta después el estado definitivo.
 
