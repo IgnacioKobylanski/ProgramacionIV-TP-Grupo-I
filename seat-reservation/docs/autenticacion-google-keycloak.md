@@ -1,258 +1,93 @@
-# Autenticación de usuarios: Google y Keycloak
+# Autenticación de usuarios: usuarios locales y Google
 
+## Resumen
 
-## Objetivo
+El sistema permite iniciar sesión de dos formas, siempre a través de Keycloak (realm `seat-reservation`):
 
-Documentar los dos métodos de inicio de sesión del proyecto Seat Reservation: usuarios locales de Keycloak (`usuario1` y `usuario2`) y Google como proveedor externo de identidad mediante Keycloak.
+- **Usuarios locales** `usuario1` y `usuario2` (contraseña igual al usuario). Vienen en el realm exportado y funcionan en cualquier máquina sin configurar nada.
+- **Google** como proveedor de identidad externo (OpenID Connect). Es **opcional** y requiere un paso adicional, porque sus credenciales son secretos y no pueden estar en el repositorio.
 
-Google utiliza OpenID Connect (OIDC) y se integra como proveedor externo de identidad en Keycloak. Los usuarios locales siguen disponibles para las pruebas del sistema.
+Google no reemplaza a Keycloak. El frontend siempre habla con Keycloak, y Keycloak delega la autenticación en Google cuando el usuario elige ese botón. Los servicios validan únicamente tokens emitidos por Keycloak.
 
-**Alcance:** esta guía explica el flujo de usuarios; la comunicación entre Availability, Booking, Payment y Notifications conserva sus tokens de servicio.
+## Flujo
 
-## 1. Arquitectura
+1. El usuario entra a `http://localhost:3000` y el frontend lo redirige a Keycloak (`http://localhost:8081`).
+2. Keycloak muestra usuario/contraseña y, si Google está configurado, el botón "Google".
+3. Si elige Google, se autentica allí y Google devuelve el navegador a Keycloak.
+4. Keycloak emite sus propios tokens para el cliente `seat-web`, y el frontend los usa para llamar a Availability.
 
-El flujo de autenticación se organiza de la siguiente manera:
+## Por qué Google no está en el realm exportado
 
-1. El usuario entra al frontend de Seat Reservation.
-    
-2. React redirige al usuario a Keycloak.
-    
-3. Keycloak muestra su página de inicio de sesión, con usuarios locales y la opción de Google.
-    
-4. El usuario puede iniciar sesión con `usuario1` o `usuario2`, o seleccionar Google para autenticarse con su cuenta externa.
-    
-5. Si elige Google, el proveedor devuelve el navegador a Keycloak.
-    
-6. Keycloak completa la autenticación local o federada y emite sus propios tokens para el cliente `seat-web`.
-    
-7. React utiliza el access token de Keycloak para acceder a los endpoints protegidos de Availability.
-    
+El proveedor de Google lleva un Client Secret. Si se exportara el realm con Google cargado, el secret saldría enmascarado y el import en otra máquina quedaría roto, o el secreto real terminaría en el repositorio. Por eso Google se carga en tiempo de ejecución con un script, y la configuración queda solo en el volumen de Keycloak de cada máquina.
 
-Google no reemplaza a Keycloak: es el proveedor externo de identidad. El backend continúa validando los tokens emitidos por el realm del proyecto.
+**Nunca exportar el realm después de configurar Google.**
 
-## 2. Datos conocidos del proyecto
+## Activar Google (para quien clone el repo)
 
-|Elemento|Valor|
-|---|---|
-|Frontend local con Docker|`http://localhost:3000`|
-|Keycloak público|`http://localhost:8081`|
-|Realm|`seat-reservation`|
-|Cliente del frontend|`seat-web`|
-|Availability API|`http://localhost:5001`|
-|Archivo del realm|`infra/keycloak/seat-reservation-realm.json`|
+Requisitos:
+- El sistema levantado con `docker compose up -d --build` y Keycloak ya iniciado (tarda cerca de 1 minuto).
+- El **Client ID** y el **Client Secret** del cliente OAuth de Google, que el equipo entrega por privado.
+- Una cuenta de Google habilitada como usuario de prueba (ver "Modo de prueba de Google").
 
-Estos valores provienen de la configuración conocida del proyecto y deben verificarse si el equipo hizo cambios.
+Desde la carpeta `seat-reservation`:
 
-## 3. Crear el proyecto de Google Cloud
+```powershell
+powershell -ExecutionPolicy Bypass -File ./scripts/configurar-google.ps1
+```
 
-1. Entrar en [https://console.cloud.google.com/](https://console.cloud.google.com/)
-    
-2. Crear o seleccionar un proyecto, por ejemplo `Seat Reservation`.
-    
-3. Abrir Google Auth Platform.
-    
-4. Configurar la pantalla de consentimiento.
-    
-5. Para una prueba con cuentas personales, seleccionar el tipo de usuario externo (`External`) cuando corresponda.
-    
-6. Si la aplicación está en modo de prueba, agregar la cuenta de Google que se utilizará para probar el login como usuario de prueba.
-    
-7. Ir a la sección de clientes (`Clients`) y crear un cliente OAuth.
-    
-8. Seleccionar el tipo de aplicación `Web application`.
-    
-9. Asignar un nombre, por ejemplo `Keycloak Seat Reservation`.
-    
+El script pide el Client ID y el Client Secret por consola (el secret no se muestra) y registra el proveedor `google` en el realm mediante la API de administración de Keycloak. No guarda las credenciales en ningún archivo.
 
-Documentación oficial:
+Resultado esperado: `OK  Proveedor google creado.` (o `actualizado` si ya existía) y la Redirect URI impresa.
 
-- [https://www.keycloak.org/docs/latest/server_admin/](https://www.keycloak.org/docs/latest/server_admin/)
-    
-- [https://developers.google.com/identity/protocols/oauth2/web-server](https://developers.google.com/identity/protocols/oauth2/web-server)
-    
+Para probar, abrir `http://localhost:3000` en una ventana de incógnito. El login de Keycloak debe mostrar el botón "Google". Al elegirlo, se ingresa con la cuenta de prueba. En el primer ingreso, Keycloak puede pedir completar nombre y apellido.
 
-## 4. Configurar la URL de retorno
+Si no se configura Google, el sistema funciona igual con `usuario1` y `usuario2`.
 
-Antes de terminar la configuración en Google, abrir la consola de administración de Keycloak.
+## Cuándo hay que volver a correr el script
 
-1. Entrar al realm `seat-reservation`.
-    
-2. Ir a `Identity Providers`.
-    
-3. Seleccionar `Add provider` y elegir `Google`.
-    
-4. Copiar el valor que Keycloak muestra en el campo `Redirect URI`.
-    
+La configuración de Google vive en el volumen de Keycloak. Si se ejecuta `docker compose down -v`, se borra y hay que volver a correr el script.
 
-En Google Cloud, agregar esa URL en `Authorized redirect URIs` del cliente OAuth.
+## Cómo se creó el cliente OAuth en Google Cloud (referencia del equipo)
 
-La URL tendrá una forma similar a:
+1. En https://console.cloud.google.com/ crear o elegir un proyecto.
+2. En Google Auth Platform configurar la pantalla de consentimiento, tipo `External`.
+3. En Data Access dejar solo los scopes `openid`, `email` y `profile`.
+4. En Clients crear un cliente OAuth de tipo `Web application`.
+5. En "Authorized redirect URIs" cargar exactamente:
 
-`http://localhost:8081/realms/seat-reservation/broker/google/endpoint`
+```
+http://localhost:8081/realms/seat-reservation/broker/google/endpoint
+```
 
-**No asumir que ese ejemplo es la URL definitiva.** Copiar siempre la URL que muestre la instalación real de Keycloak.
+Es una dirección `localhost`, así que sirve en cualquier máquina. Debe coincidir carácter por carácter con la que muestra Keycloak en Identity providers > google.
 
-La URL debe coincidir exactamente: esquema, host, puerto, ruta y barra final, si corresponde. Una diferencia puede provocar el error `redirect_uri_mismatch`.
+## Modo de prueba de Google
 
-## 5. Copiar las credenciales
+Mientras el proyecto de Google esté en modo "Testing", solo pueden ingresar las cuentas cargadas como "Test users". Cualquier otra ve un error de acceso bloqueado. Además, Google puede pedir verificación adicional (SMS, correo o doble factor) al ingresar desde un dispositivo o ubicación nuevos. [Confirmar con una prueba desde otra máquina.]
 
-Al crear el cliente OAuth, Google proporciona:
+## Qué se probó
 
-- `Client ID`
-    
-- `Client Secret`
-    
+- Ingreso con la cuenta de Google de prueba desde una máquina del equipo.
+- Reserva de un asiento con el usuario de Google.
+- Username que asigna Keycloak al usuario federado.
+- Ingreso con `usuario1` y `usuario2` tras configurar Google.
+- Prueba desde una máquina que nunca haya iniciado sesión con esa cuenta.
 
-Copiar ambos valores a la configuración del proveedor Google en Keycloak.
+## Problemas frecuentes
 
-No guardar el `Client Secret` en:
+| Síntoma | Causa probable | Qué hacer |
+|---|---|---|
+| `redirect_uri_mismatch` (pantalla de Google) | La URI de Google Cloud no es idéntica a la de Keycloak | Comparar esquema, puerto, ruta y barra final. Google puede tardar unos minutos en aplicar el cambio |
+| "Acceso bloqueado" o `access_denied` | La cuenta no está en Test users | Agregarla en Google Auth Platform > Audience |
+| No aparece el botón Google | El script no corrió o falló | Volver a correrlo y revisar Identity providers en el admin |
+| Keycloak: "Invalid parameter: redirect_uri" antes del login | [Posible volumen viejo de Keycloak con un realm anterior] | `docker compose down -v` y levantar de nuevo; después volver a correr el script |
+| Keycloak no arranca y el log dice `MIGRATION_MODEL already exists` | Volumen de Keycloak a medio inicializar | `docker compose down -v` y levantar de nuevo |
+| Login correcto pero Availability responde 401 | Token ausente o emisor distinto | Revisar `Authorization: Bearer` y el emisor `http://localhost:8081` |
+| El navegador bloquea las llamadas a la API | CORS | Verificar `Cors__AllowedOrigins__0: http://localhost:3000` en Availability |
 
-- Git o el repositorio.
-    
-- Archivos públicos del frontend.
-    
-- Variables `VITE_*` expuestas al navegador.
-    
-- Documentación compartida de Obsidian.
-    
-- Capturas de pantalla o mensajes grupales innecesarios.
-    
+## Seguridad
 
-El secreto pertenece a la configuración del proveedor en Keycloak, no al frontend React.
-
-## 6. Guardar la configuración en Keycloak
-
-En `Identity Providers` → `Google`, completar:
-
-- **Alias:** `google`.
-    
-- **Client ID:** el valor obtenido de Google Cloud.
-    
-- **Client Secret:** el valor obtenido de Google Cloud.
-    
-- **Default Scopes:** `openid profile email`, salvo que la versión/configuración actual indique otra cosa.
-    
-
-Guardar los cambios.
-
-Los scopes anteriores permiten solicitar identidad básica, perfil y correo. No solicitar acceso a Gmail, Drive ni otros servicios porque no son necesarios para el login.
-
-El alias `google` también interviene en la URL de retorno que genera Keycloak. Si se cambia, hay que comprobar nuevamente la URL.
-
-## 7. Verificar ambas modalidades de autenticación
-
-1. Abrir la aplicación.
-    
-2. Iniciar el flujo de login.
-    
-3. Verificar que el navegador llegue al realm `seat-reservation` de Keycloak.
-    
-4. Confirmar que aparezca la opción Google.
-    
-5. Seleccionarla y autenticar la cuenta de prueba.
-    
-6. Confirmar que Google devuelva el navegador a Keycloak.
-    
-7. Confirmar que Keycloak redirija al frontend y finalice el inicio de sesión.
-    
-8. Verificar que el frontend tenga una sesión válida y pueda llamar a Availability con el access token de Keycloak.
-    
-9. Repetir el inicio de sesión con los usuarios locales `usuario1` y `usuario2` y comprobar que siguen funcionando.
-    
-
-La integración de Google se puede validar antes de completar toda la interfaz de reservas, siempre que el cliente de prueba y su redirect URI estén correctamente configurados.
-
-## 8. Diagnóstico de errores comunes
-
-### `redirect_uri_mismatch`
-
-- Comparar la URL que envía Keycloak con `Authorized redirect URIs` en Google Cloud.
-    
-- Verificar puerto, esquema, host, ruta y barra final.
-    
-- Usar la URL que muestra Keycloak, no una inventada.
-    
-
-### Google no aparece en el login
-
-- Confirmar que el proveedor Google esté habilitado y guardado.
-    
-- Verificar que no esté configurado para ocultarse en la página de login.
-    
-- Confirmar que el usuario realmente esté entrando al realm `seat-reservation`.
-    
-
-### Google autentica, pero falla el retorno
-
-- Revisar los logs de Keycloak.
-    
-- Verificar las credenciales del cliente OAuth.
-    
-- Comprobar la URL de retorno y la configuración del primer inicio de sesión del proveedor.
-    
-
-### El login funciona, pero Availability devuelve 401
-
-- Confirmar que React esté enviando el access token de Keycloak.
-    
-- Revisar `Authorization: Bearer <token>`.
-    
-- Verificar la autoridad/issuer que utiliza Availability y el emisor del token.
-    
-- Revisar expiración y configuración del cliente.
-    
-
-### El navegador bloquea la llamada al backend
-
-- Revisar CORS en Availability.
-    
-- Confirmar que el origen real del frontend esté permitido, por ejemplo `http://localhost:3000` si se usa Docker.
-    
-- No confundir el origen del frontend con la URL de retorno de Google.
-    
-
-## 9. Seguridad y coordinación del equipo
-
-- No modificar ni reemplazar el realm compartido sin revisar primero los cambios del grupo.
-    
-- No subir secretos de Google al repositorio.
-    
-- Mantener los usuarios locales para que continúen disponibles.
-    
-- No configurar Google directamente desde React: la federación se realiza en Keycloak.
-    
-- Las credenciales de Google OAuth se utilizan exclusivamente para configurar el proveedor de identidad en Keycloak y no deben compartirse con otros servicios ni incluirse en el frontend.
-    
-- No ejecutar `docker compose down -v` por rutina, porque puede borrar volúmenes y datos locales.
-    
-
-## 10. Lista de verificación de la integración
-
-- El profesor confirma que Google cumple la consigna de proveedor externo.
-    
-- Existe un cliente OAuth de Google para desarrollo.
-    
-- La URL de retorno coincide con la que muestra Keycloak.
-    
-- El proveedor Google está configurado y habilitado en `seat-reservation`.
-    
-- El botón de Google aparece en el login de Keycloak.
-    
-- El usuario puede autenticarse con Google.
-    
-- Keycloak emite el token que utiliza el frontend.
-    
-- El frontend puede acceder a un endpoint protegido de Availability.
-    
-- Los usuarios locales siguen funcionando.
-    
-- No se subieron secretos al repositorio.
-    
-
-## Referencias oficiales
-
-- Keycloak Server Administration Guide: [https://www.keycloak.org/docs/latest/server_admin/](https://www.keycloak.org/docs/latest/server_admin/)
-    
-- Google OAuth 2.0 para aplicaciones web: [https://developers.google.com/identity/protocols/oauth2/web-server](https://developers.google.com/identity/protocols/oauth2/web-server)
-    
-- Google Cloud Console: [https://console.cloud.google.com/](https://console.cloud.google.com/)
+- El Client Secret de Google no va en el repositorio, ni en el frontend (`VITE_*`), ni en capturas o chats grupales.
+- Solo lo usa Keycloak, y se carga con el script.
+- Las credenciales de los servicios (`availability-service`, `booking-service`) son otra cosa: son secretos de desarrollo del realm.
+- No exportar el realm después de configurar Google.
