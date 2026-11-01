@@ -90,6 +90,11 @@ app.MapPost("/reservations", async (ReservationRequestBody body, HttpContext htt
     var userId = UserIdOf(http.User);
     if (userId is null) return Results.Unauthorized();
 
+    // Validación del contrato: faltar un campo no es "recurso inexistente" (404) sino un pedido
+    // incompleto del cliente (400). Un Guid ausente en el JSON llega como Guid.Empty.
+    if (body.EventId == Guid.Empty || body.SeatId == Guid.Empty)
+        return Results.BadRequest(new { error = "eventId y seatId son obligatorios" });
+
     var correlationId = http.Request.Headers["X-Correlation-Id"].FirstOrDefault() ?? Guid.NewGuid().ToString();
     try
     {
