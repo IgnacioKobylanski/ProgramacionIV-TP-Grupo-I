@@ -32,7 +32,7 @@ Al iniciar, la API aplica las migraciones de su base y, si no hay eventos, crea 
 
 ## Autenticación y autorización
 
-Las consultas de eventos y asientos son públicas. Crear una solicitud y consultar su resultado requiere un token Bearer válido emitido por Keycloak. Availability verifica firma, emisor y vigencia; en la configuración actual no valida la audiencia (`aud`). No guarda contraseñas ni emite tokens.
+Las consultas de eventos y asientos son públicas. Crear una solicitud, consultar su resultado y listar las reservas propias requiere un token Bearer válido emitido por Keycloak. Availability verifica firma, emisor y vigencia; en la configuración actual no valida la audiencia (`aud`). No guarda contraseñas ni emite tokens.
 
 El usuario se obtiene del claim `preferred_username` o, si no está presente, de `sub`. Si falta un token válido o no puede obtenerse el identificador del usuario, los endpoints protegidos responden **401 Unauthorized**. El usuario no se recibe en el cuerpo de la solicitud.
 
@@ -46,6 +46,7 @@ Para las dos consultas HTTP a Booking, Availability obtiene de Keycloak un token
 | GET | `/events/{eventId:guid}/seats` | Público | Listar asientos disponibles de un evento. | 200, 404, 503 |
 | POST | `/reservations` | Autenticado | Registrar y publicar una solicitud de reserva. | 202, 401, 404, 503 |
 | GET | `/reservations/{requestId:guid}` | Autenticado | Consultar el estado de una solicitud propia. | 200, 401, 404, 503 |
+| GET | `/reservations/mine` | Autenticado | Listar las reservas del usuario autenticado. | 200, 401, 503 |
 
 ## Flujo de cada endpoint
 
@@ -89,6 +90,18 @@ Si la publicación lanza `BrokerUnavailableException`, responde **503 Service Un
 
 La respuesta usa `ReservationResultDto` y no expone los campos adicionales de Booking, como `ReservationId` y `ExpiresAtUtc`. El estado no se almacena localmente: cada consulta válida de una solicitud propia vuelve a consultar Booking. Si se propaga `HttpRequestException`, responde **503 Service Unavailable**.
 
+### GET `/reservations/mine`
+
+Lista las reservas del usuario autenticado. No recibe parámetros ni cuerpo: el usuario se obtiene siempre del token validado, por lo que no es posible consultar las reservas de otra persona.
+
+1. Obtiene el usuario del claim `preferred_username` o, si no está presente, de `sub`. Si no puede identificarlo, responde **401 Unauthorized**.
+2. Invoca `AvailabilityService.GetMyReservationsAsync` con el identificador del usuario.
+3. Responde **200 OK** con el resultado de esa operación.
+
+Si la operación propaga `HttpRequestException` (Booking no responde), responde **503 Service Unavailable** en lugar de un error genérico. Al igual que en la consulta por `requestId`, no se informa un resultado parcial o inventado cuando Booking no está disponible.
+
+La ruta fija `/reservations/mine` convive con `/reservations/{requestId:guid}` sin ambigüedad: la restricción `:guid` hace que `mine` nunca se interprete como un identificador de solicitud.
+
 ## Diagrama API Availability
 
 ```mermaid
@@ -111,11 +124,13 @@ flowchart TB
             E2["GET /events/eventId/seats<br/>GetSeatsAsync"]
             E3["POST /reservations<br/>RequestReservationAsync"]
             E4["GET /reservations/requestId<br/>GetResultAsync"]
+            E5["GET /reservations/mine<br/>GetMyReservationsAsync"]
 
             ROUTE --> E1
             ROUTE --> E2
             ROUTE --> E3
             ROUTE --> E4
+            ROUTE --> E5
 
             E1 --> LIST["Consultar eventos<br/>Ordenar por DateUtc"]
             LIST --> OK1["200 OK<br/>EventDto[]"]
@@ -148,6 +163,12 @@ flowchart TB
             STATUS -->|404 o sin resultado| PROC["200 OK<br/>EnProceso"]
             STATUS -->|Resultado existente| OK4["200 OK<br/>RequestId, Status, Reason"]
             STATUS -->|Error HTTP| ERR4["503 Service Unavailable"]
+
+            E5 --> AUTH5{"¿Token válido<br/>y usuario identificado?"}
+            AUTH5 -->|No| U5["401 Unauthorized"]
+            AUTH5 -->|Sí| MINE["Consultar reservas<br/>del usuario"]
+            MINE --> OK5["200 OK<br/>Reservas propias"]
+            MINE -.->|Error HTTP| ERR5["503 Service Unavailable"]
         end
 
         subgraph DOMAIN["Availability.Domain"]
@@ -194,9 +215,9 @@ flowchart TB
     classDef error fill:#fee2e2,stroke:#dc2626,color:#991b1b
     classDef external fill:#fef3c7,stroke:#d97706,color:#92400e
 
-    class API,ROUTE,E1,E2,E3,E4 endpoint
-    class LIST,SEATS,OCC,FILTER,CORR,CHECK,SAVE,PUBLISH,RESULT,STATUS,EVENT,OWNER,AUTH3,AUTH4,PUBOK action
-    class OK1,OK2,OK3,OK4,PROC success
-    class NF1,NF3,NF4,U3,U4,ERR2,ERR3,ERR4 error
+    class API,ROUTE,E1,E2,E3,E4,E5 endpoint
+    class LIST,SEATS,OCC,FILTER,CORR,CHECK,SAVE,PUBLISH,RESULT,STATUS,EVENT,OWNER,AUTH3,AUTH4,AUTH5,MINE,PUBOK action
+    class OK1,OK2,OK3,OK4,OK5,PROC success
+    class NF1,NF3,NF4,U3,U4,U5,ERR2,ERR3,ERR4,ERR5 error
     class PG,KC,BOOK,RMQ,QUEUE external
 ```

@@ -67,6 +67,7 @@ sequenceDiagram
 | --- | --- | --- | --- | --- |
 | GET | `/reservations/{requestId:guid}` | Solo Availability (con token) | Consulta el estado de una reserva | 200, 404, 401, 403 |
 | GET | `/events/{eventId:guid}/occupied-seats` | Solo Availability (con token) | Consulta los asientos ocupados | 200, 401, 403 |
+| GET | `/reservations?userId={userId}` | Solo Availability (con token) | Consulta las reservas de un usuario | 200, 401, 403 |
 
 ## Flujo de cada endpoint
 
@@ -98,25 +99,76 @@ Se consulta un evento en específico con el eventId. Solamente devuelve los asie
 
 Responde **200 OK** con una lista de asientos.
 
-## Cómo se procesa una solicitud de reserva
+### GET `/reservations?userId={userId}`
 
-Además de los endpoints HTTP, Booking trabaja en segundo plano: consume las solicitudes de RabbitMQ desde la cola `booking`, de a una por réplica. Después llama directamente a Payment por gRPC para realizar el cobro.
+Se consultan las reservas de un usuario en particular. Availability usa este endpoint para responder `GET /reservations/mine`: toma el usuario del token del cliente y se lo envía a Booking en el parámetro `userId`.
+
+| Parámetro | Dónde va | Significado |
+| --- | --- | --- |
+| userId | Query string (obligatorio) | Identificador del usuario cuyas reservas se quieren consultar |
+
+Responde **200 OK** con la lista de reservas del usuario, obtenida mediante `ReservationService.GetByUserAsync`.
+
+Puntos importantes:
+
+- **Confianza en Availability:** Booking no verifica a qué usuario pertenece el `userId` recibido. Esa responsabilidad es de Availability, que es el único servicio autorizado a llamar a este endpoint y que obtiene el usuario del token del cliente.
+- **Sin `userId`:** al ser un parámetro obligatorio, si falta en la consulta la respuesta es un error de solicitud inválida (400), que no depende de la lógica de negocio.
+- **Sin 404:** a diferencia de la consulta por `requestId`, si el usuario no tiene reservas no hay error: la respuesta es 200 con una lista vacía.
+
+## Diagrama de Booking.Api
 
 ```mermaid
 flowchart TD
-    AV["Availability"] -->|"Publica solicitud"| EX["RabbitMQ<br/>Exchange fanout: grupo1-booking"]
-    EX --> QUEUE["Cola durable<br/>booking"]
-    QUEUE --> S["Consumidor de Booking<br/>Recibe una solicitud"]
-    S --> D{¿Ya se había procesado?}
-    D -->|Sí| I[Se ignora para no duplicar]
-    D -->|No| R[Se intenta retener el asiento]
-    R --> O{¿Asiento libre?}
-    O -->|No| X1[Reserva Rechazada: AsientoOcupado]
-    O -->|Sí| P["Se ordena el cobro a Payment<br/>Llamada directa por gRPC"]
-    P --> Q{¿Cobro aprobado?}
-    Q -->|No| X2[Reserva Rechazada: PagoFallido o PagoNoDisponible]
-    Q -->|Sí| C[Reserva Confirmada]
-    C --> N[Se avisa a Notifications]
+    subgraph CONSULTAS["1. Responder consultas (solo Availability, con token)"]
+        direction TB
+        Q1["<b>GET /reservations/requestId</b><br/>Método: GetByRequestIdAsync<br/><br/><b>Datos que recibe:</b><br/>requestId: número de la solicitud"]
+        Q1 --> Q1R{¿Existe la reserva?}
+        Q1R -->|Sí| Q1OK["<b>200 OK</b><br/><b>Datos que devuelve:</b><br/>requestId, reservationId,<br/>status, reason, expiresAtUtc"]
+        Q1R -->|No| Q1NF["<b>404 Not Found</b><br/>Availability la muestra como EnProceso"]
+
+        Q2["<b>GET /events/eventId/occupied-seats</b><br/>Método: GetOccupiedSeatsAsync<br/><br/><b>Datos que recibe:</b><br/>eventId: número del evento"]
+        Q2 --> Q2OK["<b>200 OK</b><br/><b>Datos que devuelve:</b><br/>lista de asientos ocupados"]
+
+        Q3["<b>GET /reservations?userId=...</b><br/>Método: GetByUserAsync<br/><br/><b>Datos que recibe:</b><br/>userId: usuario a consultar"]
+        Q3 --> Q3V{¿Se envió el userId?}
+        Q3V -->|No| Q3BAD["<b>400 Pedido incorrecto</b>"]
+        Q3V -->|Sí| Q3OK["<b>200 OK</b><br/><b>Datos que devuelve, por cada reserva:</b><br/>RequestId, EventId, SeatId,<br/>Status, Reason, CreatedAtUtc<br/>(de la más nueva a la más antigua)"]
+    end
+
+    subgraph PROCESO["2. Procesar una solicitud de reserva (desde RabbitMQ)"]
+        direction TB
+        M["<b>Llega una solicitud</b><br/>Cola: booking<br/><br/><b>Datos que recibe:</b><br/>RequestId, EventId, SeatId,<br/>UserId, CorrelationId"]
+        M --> M1{¿Se puede leer<br/>el mensaje?}
+        M1 -->|No| DEAD["Se aparta en la cola<br/>de mensajes fallidos (booking.dead)"]
+        M1 -->|Sí| M2{¿Ya se había<br/>procesado?}
+        M2 -->|Sí| IGN["Se ignora para no duplicar"]
+        M2 -->|No| M3{¿El asiento está libre?}
+        M3 -->|No| REJ1["Reserva <b>Rechazada</b><br/>Motivo: AsientoOcupado"]
+        M3 -->|Sí| RET["Reserva <b>Retenida</b><br/>El asiento se guarda 120 segundos"]
+        RET --> PAY["Orden de cobro a Payment (gRPC)<br/>Método: ChargeReservation<br/>Espera máxima: 5 segundos"]
+        PAY --> M4{¿Cobro aprobado?}
+        M4 -->|No, lo rechaza| REJ2["Reserva <b>Rechazada</b><br/>Motivo: PagoFallido"]
+        M4 -->|No responde| REJ3["Reserva <b>Rechazada</b><br/>Motivo: PagoNoDisponible"]
+        M4 -->|Sí| CONF["Reserva <b>Confirmada</b>"]
+        CONF --> NOT["Aviso a Notifications (HTTP)<br/>Si falla, la reserva sigue confirmada"]
+        FAIL["Si algo falla al procesar:<br/>el mensaje vuelve a la cola y se reintenta"]
+    end
+
+    subgraph VENCIMIENTO["3. Vencer reservas (tarea en segundo plano)"]
+        direction TB
+        V1["Cada 10 segundos<br/>Booking revisa las reservas Retenidas"]
+        V1 --> V2{¿Pasaron los<br/>120 segundos?}
+        V2 -->|Sí| V3["Reserva <b>Vencida</b><br/>El asiento queda libre"]
+        V2 -->|No| V4["No se hace nada"]
+    end
+
+    DB[("PostgreSQL<br/>reservas")]
+    K["Keycloak<br/>token de Availability"]
+
+    K -.->|Valida el token| CONSULTAS
+    CONSULTAS <--> DB
+    PROCESO --> DB
+    VENCIMIENTO --> DB
 ```
 
 Puntos importantes:

@@ -20,6 +20,11 @@ Por otro lado, se le pidio al mismo modelo sugerencias de informacion faltante s
 
 Armado de grafico con mermaid con la asistencia de Gemini Argon indicando los atributos de la respuesta y el metodo que es llamado. 
 
-# 4. Modificaciones en los diagrams de arquitecturas de las APIS
+# 4. Modificaciones en los diagramas de arquitecturas de las APIS
 
 Se analizaron los cambios con respecto al nuevo servicio de mensajería, y se le solicitó a la IA que realizara las modificaciones en los diagramas con respecto a las referencias a Microsoft Azure Service Bus, y las cambie por RabbitMQ 
+
+# 5. Actualizacion de documentacion de endpoint de Availability.Api y Booking.Api
+
+Se agrego a la documentacion el nuevo endpoint en Availability.Api y Booking.Api. Se le pidio a Claude asistencia en el nuevo armado de diagramas con mermaid.
+Tambien se solicito asistencia para que explique el flujo entero de ese endpoint dentro del proyecto.
