@@ -3,6 +3,8 @@
 
 Payment es el servicio que realiza el cobro de una reserva. Recibe la orden de cobro de Booking, decide si el pago se aprueba o se rechaza, guarda el resultado y lo devuelve a Booking. El cobro es una **simulación**: no se usa dinero real ni una pasarela de pagos externa.
 
+Booking recibe las solicitudes de reserva desde RabbitMQ y llama directamente a Payment por gRPC. La orden de cobro y su respuesta viajan por esa llamada gRPC; Payment no publica ni consume mensajes del broker.
+
 ## Guía de inicio
 
 Una vez que *Docker Desktop* esté levantado, abrimos una terminal parados sobre la raíz del proyecto y escribimos:
@@ -65,7 +67,7 @@ flowchart TB
     classDef success fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#1b5e20,rx:6px,ry:6px;
     classDef error fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#b71c1c,rx:6px,ry:6px;
 
-    S["<b>Llega la orden de cobro</b><br/><i>Método: ChargeReservation</i><br/>──────────────<br/><b>Datos que recibe:</b><br/>• reservation_id: número de reserva<br/>• user_id: usuario que reserva<br/>• amount_cents: monto en centavos<br/>• correlation_id: cód. seguimiento"]:::io
+    S["<b>Booking envía la orden de cobro por gRPC</b><br/><i>Método: ChargeReservation</i><br/>──────────────<br/><b>Datos que recibe:</b><br/>• reservation_id: número de reserva<br/>• user_id: usuario que reserva<br/>• amount_cents: monto en centavos<br/>• correlation_id: cód. seguimiento"]:::io
 
     S --> V{"¿El número de reserva<br/>es válido?"}:::decision
 
@@ -81,7 +83,7 @@ flowchart TB
     OK --> G[("Se guarda el pago")]:::db
     NO --> G
 
-    G --> R["<b>Se responde a Booking</b><br/><i>Método: ChargeReservation</i><br/>──────────────<br/><b>Datos que devuelve:</b><br/>• approved: aprobado (sí / no)<br/>• payment_id: nro. pago guardado<br/>• reason: motivo del rechazo"]:::io
+    G --> R["<b>Respuesta gRPC a Booking</b><br/><i>Método: ChargeReservation</i><br/>──────────────<br/><b>Datos que devuelve:</b><br/>• approved: aprobado (sí / no)<br/>• payment_id: nro. pago guardado<br/>• reason: motivo del rechazo"]:::io
 ```
 
 Puntos importantes:

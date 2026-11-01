@@ -249,10 +249,10 @@ Las pruebas reproducibles de los flujos principales están descritas en este REA
 |Joaquin Vega|Testing: flujo feliz, fallos y evidencias|
 |Diego Sebastian Ruiz Diaz|README general y documentación de Notifications|
 |Nicolas Adrian Ferreyra|README general y documentación de Notifications|
-|Demián Nazareno Cantarelli|Diagrama general y documentación complementaria|
+|Demián Nazareno Cantarelli| tabla de componentes y documentación complementaria -> README frontend|
 |Matias Candia|Diagrama general y documentación complementaria|
 |Ignacio Kobylanski|Desarrollo de código|
-|Maria Agostina Elli Valledor|Desarrollo de código y tabla de componentes|
+|Maria Agostina Elli Valledor|Desarrollo de código|
 |Nelly Burgos|Desarrollo de código|
 
 

@@ -2,7 +2,7 @@
 
 Herramienta: Codex - ChatGPT (OpenAI).
 
-Trabajo realizado: análisis de la consigna, la implementación, la documentación y la arquitectura del trabajo práctico. Este historial se actualizará con las solicitudes y los cambios posteriores.
+Trabajo realizado: análisis de la consigna, la implementación y la arquitectura del trabajo práctico, propuesta de tabla de componentes y documentación del frontend. Este historial se actualizará con las solicitudes y los cambios posteriores.
 
 ## 1. Análisis del estado inicial del trabajo práctico
 
@@ -31,3 +31,10 @@ Trabajo realizado: análisis de la consigna, la implementación, la documentaci�
 - Qué se usó: el análisis de arquitectura, el diagrama general del equipo y la tabla existente como referencia para describir el cliente HTTP, los cuatro microservicios, Azure Service Bus, Keycloak y las bases de datos de cada servicio.
 - Resultado: se elaboró en el chat una propuesta de tabla con las responsabilidades y justificaciones de los componentes, aclarando que las cuatro bases comparten un servidor PostgreSQL y que el frontend todavía no está integrado al flujo. El archivo de la tabla ya estaba subido y no se modificó en este paso.
 - Mi aporte: definí la estructura y el nivel de detalle de la tabla, y establecí como criterio de elección que la versión propuesta representara la arquitectura actual y pudiera revisarse con mi compañero antes de incorporar cambios.
+
+## 5. Primera versión del README del frontend
+
+- Prompts: pedí una primera versión del README del frontend, tomando como guía el formato de la documentación existente e incluyendo los pasos necesarios para entender su funcionamiento, ejecución, puertos y componentes.
+- Qué se usó: el README general y las guías del proyecto, las pantallas y rutas de React, los componentes, hooks y utilidades, el cliente HTTP, la integración con Keycloak, los contratos de Availability, la configuración de Vite y Nginx, las dependencias y Docker Compose.
+- Resultado: se reemplazó el README inicial de la plantilla por una guía en español con requisitos, ejecución con Docker y Vite, puertos, configuración, autenticación, pantallas, flujo de reservas, seguimiento automático, endpoints, estructura, componentes, verificación manual y problemas frecuentes. La documentación refleja el frontend integrado actual y el backend con RabbitMQ; no se modificó el código ni el README general. La revisión se basó en los archivos del proyecto, sin ejecutar pruebas funcionales.
+- Mi aporte: definí que el documento debía explicar el frontend completo y conservar un formato compatible con la documentación del equipo, como primera versión para revisión y ajustes posteriores.
