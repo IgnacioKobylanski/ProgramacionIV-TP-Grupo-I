@@ -5,7 +5,7 @@ Booking recibe la solicitud generada por el cliente en Availability. Es el encar
 ## Componentes y dependencias
 
 - **PostgreSQL:** base de datos donde Booking guarda las reservas. Las tablas se crean o actualizan solas cada vez que Booking arranca.
-- **Azure Service Bus:** servicio de mensajes. Availability deja allí las solicitudes de reserva y Booking las va leyendo. Si Booking tiene varias copias funcionando, cada solicitud la toma solo una de ellas.
+- **RabbitMQ:** Availability publica las solicitudes en el exchange `grupo1-booking` (tipo `fanout`), que las envía a la cola durable `booking`. Las réplicas de Booking comparten esa cola y cada mensaje se entrega a una de ellas.
 - **Keycloak:** servicio que identifica a cada sistema. Booking pide su token a Keycloak y también lo usa para comprobar quién le consulta.
 - **Payment:** servicio que realiza el cobro de la reserva. Booking se comunica con él mediante gRPC.
 - **Notifications:** servicio que avisa al usuario cuando su reserva queda confirmada. Booking se comunica con él por HTTP.
@@ -25,13 +25,17 @@ Estos datos se encuentran en el archivo `appsettings.json` de Booking.Api:
 | Dato | Para qué sirve | Valor de ejemplo |
 | --- | --- | --- |
 | Base de datos | Dónde se guardan las reservas | `localhost:5432` |
+| RabbitMQ | Host y puerto del broker (`RabbitMq:Host` y `RabbitMq:Port`) | `localhost:5672` |
+| Credenciales de RabbitMQ | Usuario y contraseña (`RabbitMq:User` y `RabbitMq:Password`) | `app` / `app` (desarrollo local) |
 | Payment | Dirección del servicio de cobro | `http://localhost:5003` |
 | Notifications | Dirección del servicio de avisos | `http://localhost:5004/` |
 | Keycloak | Dirección del servicio de identificación | `http://localhost:8081` |
 | Tiempo de retención | Cuánto se guarda el asiento mientras se cobra | 120 segundos |
 | Precio del asiento | Monto fijo que se cobra por cada asiento | 500000 centavos |
 
-Hay dos datos que **no vienen escritos en el archivo** y hay que cargarlos antes de arrancar: la clave de acceso a Azure Service Bus y la clave secreta de Booking en Keycloak.
+Para ejecutar Booking localmente, hay que configurar su clave secreta de Keycloak (`ServiceAuth:ClientSecret`). Las credenciales de desarrollo de RabbitMQ ya están en `appsettings.json`.
+
+El consumidor declara automáticamente el exchange, la cola y su enlace, además del exchange `grupo1-booking.dlx` y la cola de mensajes fallidos `booking.dead`. Availability declara la misma topología al publicar, por lo que no hace falta crearla manualmente.
 
 ## Autorización y Autenticación
 
@@ -96,16 +100,19 @@ Responde **200 OK** con una lista de asientos.
 
 ## Cómo se procesa una solicitud de reserva
 
-Además de los dos endpoints, Booking trabaja en segundo plano: lee las solicitudes que Availability deja en Azure Service Bus y las procesa una por una.
+Además de los endpoints HTTP, Booking trabaja en segundo plano: consume las solicitudes de RabbitMQ desde la cola `booking`, de a una por réplica. Después llama directamente a Payment por gRPC para realizar el cobro.
 
 ```mermaid
 flowchart TD
-    S[Llega una solicitud] --> D{¿Ya se había procesado?}
+    AV["Availability"] -->|"Publica solicitud"| EX["RabbitMQ<br/>Exchange fanout: grupo1-booking"]
+    EX --> QUEUE["Cola durable<br/>booking"]
+    QUEUE --> S["Consumidor de Booking<br/>Recibe una solicitud"]
+    S --> D{¿Ya se había procesado?}
     D -->|Sí| I[Se ignora para no duplicar]
     D -->|No| R[Se intenta retener el asiento]
     R --> O{¿Asiento libre?}
     O -->|No| X1[Reserva Rechazada: AsientoOcupado]
-    O -->|Sí| P[Se ordena el cobro a Payment]
+    O -->|Sí| P["Se ordena el cobro a Payment<br/>Llamada directa por gRPC"]
     P --> Q{¿Cobro aprobado?}
     Q -->|No| X2[Reserva Rechazada: PagoFallido o PagoNoDisponible]
     Q -->|Sí| C[Reserva Confirmada]
@@ -115,7 +122,8 @@ flowchart TD
 Puntos importantes:
 
 - **Sin duplicados:** si la misma solicitud llega dos veces, la segunda se ignora.
+- **Confirmación y reintentos:** Booking confirma el mensaje a RabbitMQ después de procesarlo. Si el procesamiento falla, lo devuelve a la cola para reintentar.
 - **Tiempo de retención:** el asiento se guarda 120 segundos mientras se cobra. Cada 10 segundos Booking revisa si hay reservas vencidas y las libera.
 - **Si falla Notifications:** la reserva igual queda confirmada. El error solo se anota en el registro del sistema y no se reintenta el aviso.
-- **Mensajes ilegibles:** si llega un mensaje que no se puede leer, se aparta en una cola de mensajes fallidos para revisarlo después.
+- **Mensajes ilegibles:** si llega un mensaje que no se puede leer, se rechaza sin volver a encolarlo. RabbitMQ lo envía a la cola de mensajes fallidos `booking.dead` mediante el exchange `grupo1-booking.dlx`.
 - **Pendiente conocido:** si la reserva vence mientras Payment está cobrando, el dinero no se devuelve de forma automática. Queda como mejora futura.

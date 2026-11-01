@@ -8,14 +8,16 @@ El nodo sigue Clean Architecture: `Availability.Api` expone los endpoints; `Avai
 
 - **PostgreSQL:** la base propia `availability` almacena `Event`, `Seat` y `ReservationRequest`. No almacena la ocupación ni el estado de las reservas de Booking.
 - **Booking:** se consulta por HTTP para obtener los asientos ocupados y el estado de una solicitud.
-- **Azure Service Bus:** Availability publica solicitudes en el topic configurado (`grupo1-booking-topic`); Booking las consume desde la suscripción `booking`.
+- **RabbitMQ:** Availability publica solicitudes en el exchange `grupo1-booking` (tipo `fanout`), que las envía a la cola durable `booking`. Las réplicas de Booking comparten esa cola y cada mensaje se entrega a una de ellas.
 - **Keycloak:** emite los tokens de usuario y los tokens de servicio utilizados para llamar a Booking.
 
 Availability no consume mensajes de resultado del broker. Consulta el estado en Booking cuando el usuario lo solicita.
 
 ## Guía de inicio
 
-Se requiere .NET SDK 10, Docker Desktop con PostgreSQL y Keycloak levantados, y la configuración de `ServiceBus:ConnectionString` y `ServiceAuth:ClientSecret` mediante user-secrets u otro proveedor de configuración. También deben existir el topic y la suscripción del broker. Para consultar asientos y resultados, Booking debe estar disponible en la URL configurada.
+Se requiere .NET SDK 10 y Docker Desktop con PostgreSQL, Keycloak y RabbitMQ levantados. La conexión al broker se configura con `RabbitMq:Host`, `RabbitMq:Port`, `RabbitMq:User` y `RabbitMq:Password`; `appsettings.json` incluye los valores de desarrollo local. Para ejecutar la API localmente, también debe configurarse `ServiceAuth:ClientSecret` mediante user-secrets u otro proveedor de configuración. Para consultar asientos y resultados, Booking debe estar disponible en la URL configurada.
+
+Availability y Booking declaran automáticamente el exchange, la cola y su enlace, además del exchange `grupo1-booking.dlx` y la cola de mensajes fallidos `booking.dead`. No hace falta crearlos manualmente.
 
 Desde la carpeta `seat-reservation`, levantar los contenedores y ejecutar la API:
 
@@ -26,7 +28,7 @@ dotnet run --project src/Availability/Availability.Api --urls http://localhost:5
 
 Al iniciar, la API aplica las migraciones de su base y, si no hay eventos, crea un evento de demostración con 20 asientos.
 
-> Esta guía refleja la configuración actual. `referencia-del-plan.md` todavía indica el puerto 5001 y una cola `reservation-requests`, en lugar del puerto 5237 y el topic utilizados actualmente.
+> La ejecución local mostrada usa el puerto 5237. Cuando se ejecuta con Docker Compose, Availability se publica en el puerto 5001.
 
 ## Autenticación y autorización
 
@@ -71,12 +73,12 @@ Recibe un cuerpo con `EventId` y `SeatId`. El usuario se obtiene del token valid
 1. Toma `correlationId` del header `X-Correlation-Id` o genera uno si el header no está presente.
 2. Registra el inicio en el log de auditoría y verifica en la base local que el asiento pertenezca al evento. Si no existe esa combinación, registra el resultado y responde **404 Not Found** con `{ "error": "El asiento no existe para ese evento" }`.
 3. Crea y guarda un `ReservationRequest` con un identificador único (`RequestId`), evento, asiento, usuario y fecha UTC.
-4. Publica un `ReservationRequestedMessage` en Service Bus con `RequestId`, `EventId`, `SeatId`, `UserId`, `RequestedAtUtc` y `CorrelationId`. El adaptador lo serializa como JSON y asigna `MessageId = RequestId` y el `CorrelationId` del mensaje.
-5. Cuando la publicación finaliza correctamente, registra el fin en el log de auditoría y responde **202 Accepted**, con la URL `/reservations/{requestId}` en `Location` y el cuerpo `{ requestId, correlationId }`.
+4. Publica un `ReservationRequestedMessage` en el exchange `grupo1-booking` de RabbitMQ con `RequestId`, `EventId`, `SeatId`, `UserId`, `RequestedAtUtc` y `CorrelationId`. El adaptador lo serializa como JSON, lo marca como persistente y asigna `MessageId = RequestId` y el `CorrelationId` del mensaje.
+5. Cuando RabbitMQ confirma la publicación, registra el fin en el log de auditoría y responde **202 Accepted**, con la URL `/reservations/{requestId}` en `Location` y el cuerpo `{ requestId, correlationId }`.
 
 Availability verifica la existencia del asiento, pero no consulta su ocupación ni lo retiene. Espera a que termine la publicación, sin esperar la decisión de Booking. **202 significa que la solicitud se registró y publicó; no que la reserva esté confirmada.**
 
-Si la publicación lanza `ServiceBusException`, responde **503 Service Unavailable**. Como la solicitud se guarda antes de publicar, puede quedar registrada sin que Booking la reciba. No hay Outbox ni recuperación automática de esas solicitudes por parte de la aplicación; una solicitud que no llegue a Booking puede seguir mostrándose como `EnProceso`. Repetir el POST genera otro `RequestId`: no reutiliza la solicitud anterior. La idempotencia de Booking por `RequestId` cubre mensajes repetidos de la misma solicitud.
+Si la publicación lanza `BrokerUnavailableException`, responde **503 Service Unavailable**. Como la solicitud se guarda antes de publicar, puede quedar registrada sin que Booking la reciba. No hay Outbox ni recuperación automática de esas solicitudes por parte de la aplicación; una solicitud que no llegue a Booking puede seguir mostrándose como `EnProceso`. Repetir el POST genera otro `RequestId`: no reutiliza la solicitud anterior. La idempotencia de Booking por `RequestId` cubre mensajes repetidos de la misma solicitud.
 
 ### GET `/reservations/{requestId:guid}`
 
@@ -87,7 +89,7 @@ Si la publicación lanza `ServiceBusException`, responde **503 Service Unavailab
 
 La respuesta usa `ReservationResultDto` y no expone los campos adicionales de Booking, como `ReservationId` y `ExpiresAtUtc`. El estado no se almacena localmente: cada consulta válida de una solicitud propia vuelve a consultar Booking. Si se propaga `HttpRequestException`, responde **503 Service Unavailable**.
 
-# Diagrama API Availability
+## Diagrama API Availability
 
 ```mermaid
 flowchart TB
@@ -132,10 +134,10 @@ flowchart TB
             CORR --> CHECK{"¿Asiento pertenece<br/>al evento?"}
             CHECK -->|No| NF3["404 Not Found"]
             CHECK -->|Sí| SAVE["Crear y guardar<br/>ReservationRequest"]
-            SAVE --> PUBLISH["Publicar<br/>ReservationRequestedMessage"]
-            PUBLISH --> PUBOK{"¿Publicación exitosa?"}
+            SAVE --> PUBLISH["Publicar en RabbitMQ<br/>ReservationRequestedMessage"]
+            PUBLISH --> PUBOK{"¿RabbitMQ confirmó<br/>la publicación?"}
             PUBOK -->|Sí| OK3["202 Accepted<br/>RequestId + CorrelationId<br/>Location de seguimiento"]
-            PUBOK -->|No| ERR3["503 Service Unavailable<br/>Solicitud local conservada"]
+            PUBOK -->|"BrokerUnavailableException"| ERR3["503 Service Unavailable<br/>Solicitud local conservada"]
 
             E4 --> AUTH4{"¿Token válido<br/>y usuario identificado?"}
             AUTH4 -->|No| U4["401 Unauthorized"]
@@ -155,7 +157,7 @@ flowchart TB
         subgraph INFRA["Availability.Infrastructure"]
             REPO["IAvailabilityRepository<br/>EF Core / Npgsql"]
             HTTP["IBookingClient<br/>HTTP + token de servicio"]
-            BUS["IReservationPublisher<br/>Azure Service Bus"]
+            BUS["IReservationPublisher<br/>RabbitMqReservationPublisher"]
         end
 
         LIST -.-> REPO
@@ -174,12 +176,15 @@ flowchart TB
 
     PG[("PostgreSQL<br/>Base availability")]
     KC["Keycloak<br/>Tokens JWT"]
-    BOOK["Booking API<br/>Consultas HTTP"]
-    AZ["Azure Service Bus<br/>Topic grupo1-booking-topic"]
+    BOOK["Booking<br/>API HTTP y consumidor RabbitMQ"]
+    RMQ["RabbitMQ<br/>Exchange fanout: grupo1-booking"]
+    QUEUE["Cola durable<br/>booking"]
 
     REPO --> PG
     HTTP --> BOOK
-    BUS --> AZ
+    BUS --> RMQ
+    RMQ --> QUEUE
+    QUEUE -->|"Entrega asíncrona"| BOOK
     KC -.->|"Validación JWT"| API
     KC -.->|"client_credentials"| HTTP
 
@@ -193,5 +198,5 @@ flowchart TB
     class LIST,SEATS,OCC,FILTER,CORR,CHECK,SAVE,PUBLISH,RESULT,STATUS,EVENT,OWNER,AUTH3,AUTH4,PUBOK action
     class OK1,OK2,OK3,OK4,PROC success
     class NF1,NF3,NF4,U3,U4,ERR2,ERR3,ERR4 error
-    class PG,KC,BOOK,AZ external
+    class PG,KC,BOOK,RMQ,QUEUE external
 ```

@@ -1,6 +1,6 @@
 # Historial de prompts: Facundo Varela e Isidro Ferrero
 
-Herramientas: Codex - ChatGPT. Google Gemini-Argo. Claude-Sonnet.
+Herramientas: Codex - ChatGPT. Google Gemini-Argon. Claude-Sonnet.
 
 Componentes trabajados: documentación y diagrama de APIs.
 
@@ -9,7 +9,7 @@ Realizamos una documentación del nodo completo, registrando la entrada de datos
 
 # 2. Documentación y comparación - Booking.Api
 
-Se realizo una documentacion hecha a mano, luego mandada dentro de un prompt a Gemini Argo con la instruccion de buscar errores de ortografia.
+Se realizo una documentacion hecha a mano, luego mandada dentro de un prompt a Gemini Argon con la instruccion de buscar errores de ortografia.
 
 Se volvio a pedir asistencia en el armado del grafico con mermaid debido a la disconformidad con el diagrama de la API elegido en primera instancia.
 
@@ -18,4 +18,8 @@ Se volvio a pedir asistencia en el armado del grafico con mermaid debido a la di
 Se documento en primera instancia a mano el gRPC. Luego se solicito contribucion a Claude Sonnet para la correccion eficiente de errores de ortografia. 
 Por otro lado, se le pidio al mismo modelo sugerencias de informacion faltante sobre el flujo de datos dentro del servicio.
 
-Armado de grafico con mermaid con la asistencia de Gemini Argo indicando los atributos de la respuesta y el metodo que es llamado. 
+Armado de grafico con mermaid con la asistencia de Gemini Argon indicando los atributos de la respuesta y el metodo que es llamado. 
+
+# 4. Modificaciones en los diagrams de arquitecturas de las APIS
+
+Se analizaron los cambios con respecto al nuevo servicio de mensajería, y se le solicitó a la IA que realizara las modificaciones en los diagramas con respecto a las referencias a Microsoft Azure Service Bus, y las cambie por RabbitMQ 
