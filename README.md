@@ -51,7 +51,7 @@ Los secretos de los clientes de servicio de Keycloak (`availability-service` y `
 | [`Pruebas del backend`](seat-reservation/docs/testing/backend-tests.md) | Plan y registro de pruebas del backend (27 casos, bloques A–F) |
 | [`Pruebas de RabbitMQ`](seat-reservation/docs/testing/rabbitmq-tests.md) | RAB-01 (dos consumidores competidores en la cola `booking`) y RAB-02 (mensaje inválido derivado a `booking.dead`) |
 | [`Pruebas del frontend`](seat-reservation/docs/testing/frontend-tests.md) | Plan y registro de los 17 casos de prueba del frontend (bloques A–E) |
-| [`Referencia del plan`](seat-reservation/docs/referencia-del-plan.md) | Plan original del equipo (⚠️ histórico/desactualizado: mencionaba Service Bus, Notifications como worker, otros puertos y colas) |
+| [`Referencia del plan`](seat-reservation/docs/referencia-del-plan.md) | Plan original del equipo (fue actualizado) |
 | [`Prompts`](seat-reservation/docs/prompts/) | **Consigna 2** — historial de prompts utilizados por cada integrante del equipo |
 
 ---
