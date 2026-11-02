@@ -78,13 +78,13 @@ Permite comprobar que el backend maneja correctamente solicitudes malformadas.
 > Se detectó que el endpoint POST /reservations no valida campos obligatorios; ante campos ausentes responde 404 en vez de 400
 
 **Corrección realizada:**  
-> Pendiente
+> Se implementó validación de esquema y deserialización estricta para retornar 400 Bad Request ante cuerpos vacíos o JSONs malformados.
 
 **Re-test:**  
-> Pendiente
+> Se reenviaron solicitudes con body vacío y JSON malformado, verificando que la API responde correctamente con el código 400 Bad Request.
 
 **Resultado final:**  
-> REVISAR
+> PASS
 
 ---
 
@@ -109,13 +109,13 @@ Evita que se creen reservas con información incompleta.
 > Se detectó que el endpoint POST /reservations no valida campos obligatorios; ante 'eventId' o 'seatId' ausentes responde 404 en vez de 400
 
 **Corrección realizada:**  
-> PENDIENTE
+> Se incorporó la validación explícita de campos obligatorios en el contrato de entrada del endpoint.
 
 **Re-test:**  
-> PENDIENTE
+> Se realizaron pruebas omitiendo 'eventId' y 'seatId', confirmando que el backend rechaza la solicitud devolviendo 400 Bad Request.
 
 **Resultado final:**  
-> REVISAR
+> PASS
 
 ---
 
