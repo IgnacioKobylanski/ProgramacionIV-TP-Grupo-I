@@ -55,9 +55,6 @@ Permite comprobar que el caso de uso principal funciona correctamente.
 **Resultado final:**  
 > PASS
 
-**Observaciones finales:**  
-> 
-
 ---
 
 ## 2. Body vacío o JSON malformado
@@ -88,9 +85,6 @@ Permite comprobar que el backend maneja correctamente solicitudes malformadas.
 
 **Resultado final:**  
 > REVISAR
-
-**Observaciones finales:**  
-> El problema requiere una revisión.
 
 ---
 
@@ -123,9 +117,6 @@ Evita que se creen reservas con información incompleta.
 **Resultado final:**  
 > REVISAR
 
-**Observaciones finales:**  
-> El problema requiere una revisión.
-
 ---
 
 ## 4. Tipos de datos incorrectos
@@ -156,9 +147,6 @@ Garantiza que el contrato de la API sea respetado.
 
 **Resultado final:**  
 > PASS
-
-**Observaciones finales:**  
-> 
 
 ---
 
@@ -191,9 +179,6 @@ Permite comprobar el comportamiento del sistema en los límites de sus reglas de
 **Resultado final:**  
 > PASS
 
-**Observaciones finales:**  
-> 
-
 ---
 
 ## 6. Strings largos o con caracteres especiales
@@ -224,9 +209,6 @@ Permite comprobar la robustez del backend frente a entradas no convencionales.
 
 **Resultado final:**  
 > PASS
-
-**Observaciones finales:**  
-> 
 
 ---
 
@@ -259,9 +241,6 @@ Evita que se procesen reservas asociadas a eventos o asientos inexistentes.
 **Resultado final:**  
 > PASS
 
-**Observaciones finales:**  
-> 
-
 ---
 
 ## 8. Verbo HTTP incorrecto
@@ -291,60 +270,57 @@ Permite comprobar que el contrato HTTP de la API está correctamente definido.
 > No fue necesario realizar un re-test
 
 **Resultado final:**  
-> PASS
-
-**Observaciones finales:**  
-> 
+> PASS 
 
 ---
 
 # B. Reglas de negocio
 
 En este bloque se evaluaron las reglas de negocio relacionadas con la creación y procesamiento de reservas.
-Las reservas son asincrónicas: POST /reservations responde 202 Accepted y el resultado final (Confirmada, Rechazada o Vencida) se consulta después en GET /reservations/{requestId}.
+Las reservas son asincrónicas: POST /reservations (Availability) responde 202 Accepted y publica la solicitud en RabbitMQ. Booking la consume, retiene el asiento, cobra mediante Payment (gRPC) y deja la reserva en estado `Confirmada` o `Rechazada`. El resultado se consulta después en GET /reservations/{requestId}. Un asiento se considera ocupado únicamente mientras tenga una reserva en estado `Retenida` o `Confirmada`.
 
 ---
 
 ### Prueba 9 - Reservar un asiento libre
 
 **Qué se prueba:**  
-Crear una reserva utilizando un asiento que se encuentra disponible.
+Crear una reserva con un usuario autenticado utilizando un asiento que se encuentra disponible.
 
 **Resultado esperado:**  
-El endpoint `POST` responde con **202 Accepted**. La reserva se procesa de forma asincrónica y posteriormente alcanza el estado **`Confirmada`**. El asiento utilizado debe quedar en estado **ocupado**.
+El endpoint `POST` responde con **202 Accepted** y devuelve `requestId` y `correlationId`. La reserva se procesa de forma asincrónica y posteriormente alcanza el estado **`Confirmada`**. El asiento utilizado debe aparecer como **`occupied: true`** en `GET /events/{eventId}/seats`. Además, Notifications debe registrar el aviso de confirmación (visible en `GET /notifications`).
 
 **Problema que permite detectar:**  
-Permite detectar problemas en la creación y procesamiento de reservas, así como inconsistencias entre el estado de la reserva y el estado final del asiento.
+Permite detectar problemas en la creación y procesamiento de reservas, en la cadena Availability → RabbitMQ → Booking → Payment → Notifications, así como inconsistencias entre el estado de la reserva y el estado final del asiento.
 
 **Importancia:**  
 Es la validación principal del flujo de reserva y sirve como base para varias de las pruebas posteriores.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
 ### Prueba 10 - Reservar un asiento ya reservado
 
 **Qué se prueba:**  
-Intentar reservar un asiento que ya fue reservado previamente.
+Intentar reservar un asiento que ya fue reservado previamente por otro usuario (por ejemplo, `usuario1` lo reserva y luego `usuario2` intenta reservarlo).
 
 **Resultado esperado:**  
-El `POST` no necesariamente devuelve un `409 Conflict` de forma inmediata. El sistema responde **202 Accepted** y la reserva debe ser procesada posteriormente hasta alcanzar el estado **`Rechazada`**, con motivo **`AsientoOcupado`**.
+El `POST` no devuelve un `409 Conflict` de forma inmediata. El sistema responde **202 Accepted** y la solicitud debe ser procesada posteriormente por Booking hasta alcanzar el estado **`Rechazada`**, con motivo **`AsientoOcupado`**.
 
-La primera reserva debe permanecer **`Confirmada`** y no debe ser reemplazada ni modificada por la segunda solicitud.
+La primera reserva debe permanecer **`Confirmada`** y no debe ser reemplazada ni modificada por la segunda solicitud. La segunda solicitud rechazada no debe generar una notificación ni un cobro.
 
 **Problema que permite detectar:**  
 Permite detectar dobles reservas o situaciones en las que una nueva solicitud pueda modificar o pisar una reserva existente.
@@ -353,62 +329,62 @@ Permite detectar dobles reservas o situaciones en las que una nueva solicitud pu
 Es una prueba fundamental para verificar la integridad de la disponibilidad de los asientos.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
 ### Prueba 11 - Varios asientos en solicitudes consecutivas
 
 **Qué se prueba:**  
-Verificar la posibilidad de reservar varios asientos mediante solicitudes individuales consecutivas.
+Verificar la posibilidad de reservar varios asientos mediante solicitudes individuales consecutivas del mismo usuario.
 
 **Resultado esperado:**  
-Las tres solicitudes responden con **202 Accepted** y cada reserva alcanza posteriormente el estado **`Confirmada`**. Los tres asientos deben quedar ocupados.
+Las tres solicitudes responden con **202 Accepted** y cada reserva alcanza posteriormente el estado **`Confirmada`**. Los tres asientos deben aparecer como ocupados y las tres reservas deben figurar en `GET /reservations/mine`.
 
 **Problema que permite detectar:**  
-Permite detectar problemas en la creación de múltiples reservas consecutivas o inconsistencias en la actualización del estado de los asientos.
+Permite detectar problemas en la creación de múltiples reservas consecutivas o inconsistencias en la actualización del estado de los asientos y del historial del usuario.
 
 **Importancia:**  
 Permite comprobar el comportamiento del sistema cuando un usuario necesita reservar varios asientos, aunque la API no disponga de una operación por lote.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
-### Prueba 12 - Mismo asiento reservado dos veces
+### Prueba 12 - Mismo asiento reservado dos veces por el mismo usuario
 
 **Qué se prueba:**  
-Intentar reservar dos veces el mismo asiento utilizando el mismo usuario.
+Intentar reservar dos veces el mismo asiento utilizando el mismo usuario, una a continuación de la otra.
 
 **Resultado esperado:**  
-Una de las reservas debe alcanzar el estado **`Confirmada`** y la segunda debe alcanzar el estado **`Rechazada`**.
+Una de las reservas debe alcanzar el estado **`Confirmada`** y la segunda debe alcanzar el estado **`Rechazada`** con motivo **`AsientoOcupado`**.
 
-Si ambas reservas alcanzaran el estado `Confirmada`, existiría una posible situación de **doble reserva**, lo que representaría un error grave de integridad del sistema.
+Si ambas reservas alcanzaran el estado `Confirmada`, existiría una situación de **doble reserva**, lo que representaría un error grave de integridad del sistema.
 
 **Problema que permite detectar:**  
 Permite detectar la posibilidad de generar dos reservas confirmadas para un mismo asiento.
@@ -417,63 +393,59 @@ Permite detectar la posibilidad de generar dos reservas confirmadas para un mism
 Es una prueba crítica para verificar que las reglas de disponibilidad se mantengan incluso ante solicitudes repetidas sobre el mismo recurso.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
-### Prueba 13 - Evento pasado o inexistente
+### Prueba 13 - Reservas sobre eventos y asientos inválidos, pago rechazado y vencimiento
 
 **Qué se prueba:**  
-Validar el comportamiento del backend frente a diferentes situaciones relacionadas con eventos y asientos.
+Validar el comportamiento del backend frente a diferentes situaciones relacionadas con eventos, asientos y reglas de cobro y vencimiento.
 
 La prueba cubre las siguientes variantes:
 
 - **13a:** Evento inexistente.
 - **13b:** Asiento inexistente.
 - **13c:** Asiento perteneciente a otro evento.
-- **13d:** Intentar reservar en un evento cuya fecha ya pasó.
-- **13e:** Crear un evento con fecha pasada.
-- **13f:** Crear un evento con nombre vacío.
-- **13g:** Crear un evento con 27 filas.
-- **13h:** Crear un evento con 0 asientos.
+- **13d:** Pago rechazado por Payment (monto fuera del rango permitido, configurando `Booking__SeatPriceCents` por encima de `Payment__MaxAmount`).
 
 **Resultado esperado:**  
-Las variantes relacionadas con datos inexistentes o inválidos deben ser rechazadas por el backend, esperando respuestas **400 Bad Request** o **404 Not Found**, según corresponda al caso.
+Las variantes 13a, 13b y 13c deben ser rechazadas por Availability con **404 Not Found**, sin publicar ningún mensaje en RabbitMQ.
 
-En particular, la variante **13d** debe verificar que una reserva no pueda realizarse sobre un evento que ya finalizó.
+En la variante 13d, el `POST` responde 202 y la reserva alcanza el estado **`Rechazada`** con motivo **`PagoFallido`**; el asiento debe quedar libre y no debe enviarse ninguna notificación.
 
 **Problema que permite detectar:**  
-Permite detectar validaciones incompletas sobre eventos, asientos y relaciones entre recursos, además de posibles inconsistencias relacionadas con fechas y datos inválidos.
+Permite detectar validaciones incompletas sobre eventos y asientos, y errores en las reglas de rechazo por pago, vencimiento y liberación de asientos.
 
 **Importancia:**  
 Permite verificar que las reglas de negocio se apliquen correctamente más allá del caso de reserva de un asiento disponible.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
@@ -482,13 +454,13 @@ Permite verificar que las reglas de negocio se apliquen correctamente más allá
 ## 14. Consultar una reserva inmediatamente después de crearla
 
 **Qué se prueba:**  
-Crear una reserva y consultar su estado inmediatamente después.
+Crear una reserva y consultar su estado en `GET /reservations/{requestId}` inmediatamente después de recibir el 202.
 
 **Resultado esperado:**  
-El sistema debe devolver un estado coherente.
+El sistema debe devolver un estado coherente: **`EnProceso`** si Booking todavía no registró la solicitud, o el estado que Booking ya haya decidido (`Retenida`, `Confirmada` o `Rechazada`). Nunca debe responder 404 ni 500 para una solicitud propia recién creada.
 
 **Problema que permite detectar:**  
-Problemas de sincronización entre servicios.
+Problemas de sincronización entre Availability y Booking en la zona de consistencia eventual.
 
 **Importancia:**  
 Permite comprobar la consistencia del sistema después de una operación.
@@ -516,13 +488,13 @@ Permite comprobar la consistencia del sistema después de una operación.
 ## 15. Consultar una reserva mientras se procesa
 
 **Qué se prueba:**  
-Consultar una reserva durante un proceso asincrónico.
+Consultar repetidamente (polling) una reserva durante el procesamiento asincrónico, desde que se crea hasta que alcanza un estado final.
 
 **Resultado esperado:**  
-El sistema debe devolver el estado actual sin generar inconsistencias.
+El sistema debe devolver el estado actual sin generar inconsistencias. La secuencia observada debe respetar un orden válido (`EnProceso` → `Retenida` → `Confirmada` o `Rechazada`) y no debe retroceder de un estado final a uno anterior. Una solicitud ajena o inexistente debe responder **404**.
 
 **Problema que permite detectar:**  
-Errores en el manejo de estados intermedios.
+Errores en el manejo de estados intermedios y filtraciones de información entre usuarios.
 
 **Importancia:**  
 Permite comprobar el comportamiento del sistema durante procesos que no son instantáneos.
@@ -550,16 +522,16 @@ Permite comprobar el comportamiento del sistema durante procesos que no son inst
 ## 16. Reintentar una operación asincrónica
 
 **Qué se prueba:**  
-Repetir una solicitud mientras una operación anterior todavía está siendo procesada.
+Repetir una solicitud mientras una operación anterior todavía está siendo procesada, y reentregar al consumidor el mismo mensaje (mismo `requestId`) de la cola `booking`.
 
 **Resultado esperado:**  
-El sistema debe manejar correctamente el reintento sin generar datos duplicados o inconsistentes.
+El sistema debe manejar correctamente el reintento sin generar datos duplicados o inconsistentes. Booking es idempotente por `RequestId`: una solicitud duplicada se ignora y existe una única reserva por solicitud. Payment es idempotente por `ReservationId` (un único cobro) y Notifications es idempotente por `ReservationId` (una única notificación).
 
 **Problema que permite detectar:**  
-Problemas de idempotencia o procesamiento duplicado.
+Problemas de idempotencia o procesamiento duplicado en Booking, Payment o Notifications.
 
 **Importancia:**  
-Los reintentos son habituales en sistemas distribuidos.
+Los reintentos y las reentregas del broker son habituales en sistemas distribuidos.
 
 **Resultado inicial:**  
 > [PASS / FAIL / REVISAR]
@@ -584,10 +556,10 @@ Los reintentos son habituales en sistemas distribuidos.
 ## 17. Verificar estados inconsistentes
 
 **Qué se prueba:**  
-Comprobar que el estado de la reserva y el estado del asiento permanezcan sincronizados.
+Comprobar que el estado de la reserva, el estado del asiento, el historial del usuario y la notificación permanezcan sincronizados tras una operación.
 
 **Resultado esperado:**  
-Ambos recursos deben reflejar correctamente la operación realizada.
+Para una reserva `Confirmada`, el asiento debe figurar como ocupado, la reserva debe aparecer en `GET /reservations/mine` con el mismo estado y debe existir exactamente una notificación. Para una reserva `Rechazada` o `Vencida`, el asiento debe figurar libre y no debe existir notificación.
 
 **Problema que permite detectar:**  
 Inconsistencias entre microservicios o bases de datos.
@@ -620,13 +592,13 @@ Evita situaciones donde el sistema muestre información contradictoria.
 ## 18. Dos usuarios reservando el mismo asiento simultáneamente
 
 **Qué se prueba:**  
-Enviar dos solicitudes de reserva para el mismo asiento al mismo tiempo.
+Enviar dos solicitudes de reserva para el mismo asiento al mismo tiempo, con `usuario1` y `usuario2`, de modo que las procesen las dos réplicas de Booking.
 
 **Resultado esperado:**  
-Solamente una solicitud debe poder completar la reserva.
+Solamente una solicitud debe alcanzar el estado **`Confirmada`**. La otra debe quedar **`Rechazada`** con motivo **`AsientoOcupado`**. Debe existir una sola reserva activa para ese asiento (lo garantiza el índice único parcial de la base de datos de Booking).
 
 **Problema que permite detectar:**  
-Condiciones de carrera.
+Condiciones de carrera entre las réplicas de Booking.
 
 **Importancia:**  
 Es fundamental en un sistema de reservas.
@@ -654,13 +626,13 @@ Es fundamental en un sistema de reservas.
 ## 19. Múltiples solicitudes simultáneas sobre un mismo asiento
 
 **Qué se prueba:**  
-Enviar varias solicitudes concurrentes para reservar el mismo asiento.
+Enviar varias solicitudes concurrentes (por ejemplo, 10 a 20) para reservar el mismo asiento, con distintos usuarios y repartidas entre las réplicas de Booking.
 
 **Resultado esperado:**  
-El sistema debe permitir solamente la cantidad de reservas correspondiente a la disponibilidad real.
+Exactamente una solicitud debe quedar **`Confirmada`** y todas las demás **`Rechazadas`** con motivo **`AsientoOcupado`**. No debe haber respuestas 5xx y debe generarse una sola notificación y un solo cobro.
 
 **Problema que permite detectar:**  
-Fallos de sincronización y problemas de concurrencia.
+Fallos de sincronización y problemas de concurrencia bajo alta competencia por un recurso.
 
 **Importancia:**  
 Permite evaluar el comportamiento bajo alta competencia por un recurso.
@@ -688,10 +660,10 @@ Permite evaluar el comportamiento bajo alta competencia por un recurso.
 ## 20. Crear reservas simultáneas para diferentes asientos
 
 **Qué se prueba:**  
-Enviar múltiples reservas simultáneas sobre asientos diferentes.
+Enviar múltiples reservas simultáneas sobre asientos diferentes del mismo evento.
 
 **Resultado esperado:**  
-Las operaciones independientes deberían procesarse correctamente.
+Todas las operaciones independientes deben procesarse correctamente y alcanzar el estado **`Confirmada`**, sin rechazos por `AsientoOcupado` ni errores. Los mensajes deben repartirse entre las dos réplicas de Booking (consumidores competidores).
 
 **Problema que permite detectar:**  
 Bloqueos innecesarios o problemas de concurrencia general.
@@ -722,10 +694,10 @@ Permite evaluar el comportamiento del sistema bajo carga concurrente.
 ## 21. Repetir solicitudes concurrentes del mismo usuario
 
 **Qué se prueba:**  
-Enviar varias solicitudes simultáneas equivalentes desde un mismo usuario.
+Enviar varias solicitudes simultáneas equivalentes (mismo usuario, mismo evento y mismo asiento), como ocurriría con múltiples clics.
 
 **Resultado esperado:**  
-El sistema debe evitar la creación de reservas duplicadas cuando corresponda.
+Debe confirmarse una única reserva; las solicitudes restantes deben quedar **`Rechazadas`** con motivo **`AsientoOcupado`**. El asiento no debe quedar con más de una reserva activa y el usuario debe recibir una sola notificación.
 
 **Problema que permite detectar:**  
 Fallos de idempotencia y duplicación de operaciones.
@@ -755,13 +727,13 @@ Permite detectar problemas producidos por múltiples clics, reintentos o solicit
 
 # E. Microservicios y tolerancia a fallos
 
-## 22. Fallo del servicio encargado de reservas
+## 22. Fallo del servicio encargado de reservas (Booking)
 
 **Qué se prueba:**  
-Simular o provocar la indisponibilidad del servicio relacionado con las reservas.
+Detener Booking (`docker compose stop booking`) y probar los endpoints de Availability que dependen de él, y luego enviar una nueva solicitud de reserva.
 
 **Resultado esperado:**  
-El sistema debe responder de forma controlada.
+Las consultas que dependen de Booking (`GET /events/{eventId}/seats`, `GET /reservations/{requestId}` y `GET /reservations/mine`) deben responder **503 Service Unavailable** de forma controlada, sin 500 ni asientos mostrados como libres por error. `GET /events` debe seguir funcionando. Un `POST /reservations` debe seguir respondiendo 202, porque el mensaje queda encolado en RabbitMQ hasta que Booking vuelva.
 
 **Problema que permite detectar:**  
 Fallos en el manejo de errores entre microservicios.
@@ -789,16 +761,24 @@ Permite comprobar la resiliencia del sistema.
 
 ---
 
-## 23. Fallo de un servicio dependiente
+## 23. Fallo de un servicio dependiente (Payment, Notifications y RabbitMQ)
 
 **Qué se prueba:**  
-Simular un fallo en uno de los servicios de los que depende la operación.
+Simular el fallo de cada dependencia de la operación, una por vez:
+
+- **23a:** Detener Payment (`docker compose stop payment`) y crear una reserva.
+- **23b:** Detener Notifications (`docker compose stop notifications`) y crear una reserva.
+- **23c:** Detener RabbitMQ (`docker compose stop rabbitmq`) y crear una reserva.
 
 **Resultado esperado:**  
-El backend debe manejar correctamente la falla y evitar estados inconsistentes.
+En 23a, la reserva debe quedar **`Rechazada`** con motivo **`PagoNoDisponible`** y el asiento debe quedar libre.
+
+En 23b, la reserva debe quedar igualmente **`Confirmada`**: la falla de Notifications no debe deshacer ni demorar la confirmación (degradación elegante) y solo debe registrarse una advertencia en el log.
+
+En 23c, `POST /reservations` debe responder **503 Service Unavailable** de forma rápida (alrededor de 5 segundos como máximo) y no debe quedar ninguna reserva confirmada.
 
 **Problema que permite detectar:**  
-Problemas de comunicación entre microservicios.
+Problemas de comunicación entre microservicios y estados inconsistentes cuando falla una dependencia.
 
 **Importancia:**  
 Los servicios distribuidos deben contemplar la posibilidad de que una dependencia no esté disponible.
@@ -826,10 +806,10 @@ Los servicios distribuidos deben contemplar la posibilidad de que una dependenci
 ## 24. Timeout de un microservicio
 
 **Qué se prueba:**  
-Simular una respuesta demasiado lenta de un servicio dependiente.
+Simular una respuesta demasiado lenta de un servicio dependiente. Por ejemplo, pausar el contenedor de Payment (`docker compose pause payment`) mientras se procesa una reserva, y pausar Notifications (`docker compose pause notifications`) mientras se confirma otra.
 
 **Resultado esperado:**  
-El backend debe aplicar el comportamiento definido para timeouts.
+Booking aplica un plazo máximo de 5 segundos al cobro por gRPC: al vencerlo, la reserva debe quedar **`Rechazada`** con motivo **`PagoNoDisponible`**. Notifications tiene un timeout de 3 segundos: al vencerlo, la reserva debe seguir **`Confirmada`**. En ambos casos no debe haber solicitudes colgadas indefinidamente.
 
 **Problema que permite detectar:**  
 Solicitudes bloqueadas, tiempos de respuesta excesivos o falta de manejo de timeout.
@@ -860,13 +840,16 @@ Evita que una dependencia lenta afecte indefinidamente al sistema.
 ## 25. Respuesta inválida de un servicio dependiente
 
 **Qué se prueba:**  
-Simular que un servicio dependiente devuelve una respuesta inesperada o inválida.
+Simular que un servicio dependiente o el broker entrega información inesperada o inválida:
+
+- **25a:** Publicar en la cola `booking` (desde el panel de RabbitMQ) un mensaje con JSON ilegible.
+- **25b:** Invocar a Payment con un `reservation_id` que no sea un GUID válido.
 
 **Resultado esperado:**  
-El sistema debe manejar la respuesta sin producir errores no controlados.
+En 25a, el consumidor de Booking debe rechazar el mensaje sin reencolarlo y este debe aparecer en la cola de mensajes fallidos `booking.dead`; el consumidor debe seguir procesando mensajes normales. En 25b, Payment debe responder con un error gRPC `InvalidArgument` y no debe caerse.
 
 **Problema que permite detectar:**  
-Falta de validación de respuestas entre servicios.
+Falta de validación de respuestas y mensajes entre servicios.
 
 **Importancia:**  
 Los microservicios deben validar la información recibida de sus dependencias.
@@ -894,10 +877,10 @@ Los microservicios deben validar la información recibida de sus dependencias.
 ## 26. Recuperación después de un fallo
 
 **Qué se prueba:**  
-Comprobar el comportamiento del sistema después de que un servicio vuelva a estar disponible.
+Comprobar el comportamiento del sistema después de que un servicio vuelva a estar disponible: reiniciar Booking (`docker compose start booking`) con solicitudes pendientes en la cola, y reiniciar Payment, Notifications y RabbitMQ.
 
 **Resultado esperado:**  
-El sistema debe recuperar su funcionamiento correctamente y no generar datos duplicados o inconsistentes.
+Al volver Booking, debe procesar las solicitudes que quedaron encoladas durante la caída, sin duplicar reservas ni cobros. Si Booking cae a mitad de un procesamiento, el mensaje no confirmado vuelve a la cola y se procesa de nuevo sin duplicados. Las consultas de Availability deben volver a responder con normalidad y el consumidor de Booking debe reconectarse al broker.
 
 **Problema que permite detectar:**  
 Problemas de recuperación y manejo de reintentos.
@@ -934,21 +917,26 @@ Comprobar el acceso al backend utilizando diferentes condiciones de autenticaci�
 
 Entre los escenarios se incluyen:
 
-- Solicitudes sin autenticación.
-- Tokens inválidos.
-- Tokens expirados.
-- Acceso a recursos no pertenecientes al usuario.
-- Datos con caracteres especiales.
-- Entradas diseñadas para comprobar el correcto tratamiento de información potencialmente peligrosa.
+- Solicitudes a `POST /reservations`, `GET /reservations/{requestId}` y `GET /reservations/mine` sin token.
+- Tokens inválidos o con firma alterada, y tokens expirados.
+- Intento de ver el resultado de una solicitud de otro usuario.
+- Intento de reservar a nombre de otro usuario enviando un `userId` en el cuerpo.
+- Llamadas directas a Booking, Payment o Notifications con un token de usuario (`seat-web`) o con el token de un servicio no autorizado (por ejemplo, `availability-service` sobre `POST /notifications`).
+- Datos con caracteres especiales (inyección SQL, HTML/script) en los campos enviados.
+- Acceso a los servicios internos (Payment) desde fuera de la red de Docker.
 
 **Resultado esperado:**  
-El backend debe rechazar accesos no autorizados y tratar las entradas de forma segura.
+Availability debe responder **401 Unauthorized** ante la falta de token, un token inválido o un token expirado. Una solicitud ajena debe responder **404**, igual que una inexistente. El usuario de la reserva siempre debe salir del token, nunca del cuerpo.
+
+Booking y Notifications deben responder **401/403** ante tokens que no correspondan al servicio permitido por su política (`AvailabilityOnly` y `BookingOnly`, respectivamente). Payment no debe ser accesible desde el exterior.
+
+Las entradas maliciosas deben ser rechazadas o tratadas como datos, sin ejecutarse ni provocar errores 5xx.
 
 **Problema que permite detectar:**  
-Fallos de autenticación, autorización o validación de entradas.
+Fallos de autenticación, autorización entre usuarios y entre servicios, o de validación de entradas.
 
 **Importancia:**  
-Las reservas contienen información que debe estar protegida y las operaciones deben ejecutarse únicamente cuando el usuario tenga los permisos correspondientes.
+Las reservas contienen información que debe estar protegida y las operaciones deben ejecutarse únicamente cuando el usuario o el servicio tengan los permisos correspondientes.
 
 **Resultado inicial:**  
 > [PASS / FAIL / REVISAR]
@@ -987,9 +975,9 @@ Esta sección permite tener una vista general de los errores encontrados durante
 | Bloque | Área | Cantidad de pruebas | PASS | FAIL | REVISAR |
 |---|---|---:|---:|---:|---:|
 | A | Contrato y validación de entrada | 8 | 6 |  | 2 |
-| B | Reglas de negocio | 8 | [ ] | [ ] | [ ] |
+| B | Reglas de negocio | 5 | 5 |  |  |
 | C | Estados y flujo asincrónico | 4 | [ ] | [ ] | [ ] |
 | D | Concurrencia | 4 | [ ] | [ ] | [ ] |
 | E | Microservicios y tolerancia a fallos | 5 | [ ] | [ ] | [ ] |
 | F | Seguridad y manejo de datos | 1 | [ ] | [ ] | [ ] |
-| **Total** | | **27** | **6** | **[ ]** | **2** |
+| **Total** | | **27** | **11** | **[ ]** | **2** |
