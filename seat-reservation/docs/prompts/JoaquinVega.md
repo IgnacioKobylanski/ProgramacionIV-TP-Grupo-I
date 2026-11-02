@@ -107,7 +107,7 @@ Se generó el archivo:
 Este archivo contiene la documentación de los casos de prueba del backend de **Seat Reservation**, incluyendo los resultados obtenidos, los errores encontrados, las correcciones aplicadas y los re-tests correspondientes.
 
 ---
-## Prompt 4: Generación de scripts para el Bloque B
+# Prompt 4: Generación de scripts para el Bloque B
 
 **Prompt utilizado:**
 
@@ -118,8 +118,8 @@ Este archivo contiene la documentación de los casos de prueba del backend de **
 > 9. Reservar un asiento libre.
 > 10. Reservar un asiento ya reservado.
 > 11. Varios asientos en solicitudes consecutivas.
-> 12. Mismo asiento reservado dos veces.
-> 13. Evento pasado o inexistente.
+> 12. Mismo asiento reservado dos veces por el mismo usuario.
+> 13. Reservas sobre eventos y asientos inválidos, pago rechazado y vencimiento.
 >
 > Los scripts deben permitir ejecutar cada prueba de forma clara y reproducible y registrar el resultado obtenido para poder documentarlo posteriormente.
 
@@ -183,4 +183,4 @@ Las tareas realizadas incluyen:
 - Realizar nuevamente las pruebas luego de las correcciones.
 - Verificar los resultados finales.
 
-Este archivo funciona como **historial del proceso de trabajo y de los prompts utilizados**, mientras que los resultados y la documentación detallada de las pruebas se encuentran en `documentacion-tests.md`.
+Este archivo funciona como **historial del proceso de trabajo y de los prompts utilizados**, mientras que los resultados y la documentación detallada de las pruebas se encuentran en `backend-tests.md`.
