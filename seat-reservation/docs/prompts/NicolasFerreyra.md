@@ -1,71 +1,59 @@
-# Historial de prompts – Nicolás Ferreyra
+# Historial de prompts: Nicolás Ferreyra
 
-**Materia:** Programación IV – UTN  
-**Proyecto:** Sistema de reserva de asientos – Grupo 1  
-**Área de trabajo:** Microservicio Notifications y documentación de arquitectura
+Herramienta: ChatGPT (OpenAI). Componentes trabajados: Notifications, referencia del plan y documentación técnica del frontend.
 
 ## 1. Comprensión del microservicio Notifications
+- **Prompts:** consulté cuál era la responsabilidad de Notifications y cómo se comunicaba con Booking.
+- **Qué se usó:** explicación del flujo de confirmación y del envío de avisos mediante una llamada HTTP desde Booking.
+- **Mi aporte:** analicé el lugar que ocupa Notifications dentro del sistema y distinguí su función de la de los demás microservicios.
 
-**Consulta realizada:**
+## 2. Análisis de la implementación de Notifications
+- **Prompts:** pedí revisar la estructura del servicio en .NET, sus endpoints y la persistencia con PostgreSQL.
+- **Qué se usó:** revisión de la API mínima, del registro de notificaciones y de las responsabilidades de sus componentes.
+- **Mi aporte:** revisé el funcionamiento del servicio para poder explicarlo y documentarlo de forma consistente con la implementación.
 
-> ¿Cuál es la responsabilidad del microservicio Notifications dentro del sistema de reserva de asientos y cómo se comunica con Booking?
+## 3. Idempotencia y notificaciones duplicadas
+- **Prompts:** pregunté cómo se evita registrar varias notificaciones para una misma reserva y qué función cumple `ReservationId`.
+- **Qué se usó:** explicación de la idempotencia y del índice único por `ReservationId`.
+- **Mi aporte:** identifiqué por qué el sistema debe tolerar solicitudes repetidas sin duplicar registros y lo incorporé a la documentación de Notifications.
 
-**Objetivo:** Comprender el funcionamiento del microservicio y su participación en el flujo de confirmación de reservas.
+## 4. Pruebas locales de Notifications
+- **Prompts:** consulté cómo probar los endpoints y comprobar la persistencia y la prevención de duplicados.
+- **Qué se usó:** orientación para revisar respuestas HTTP, registros de la base de datos y comportamiento ante solicitudes repetidas.
+- **Mi aporte:** utilicé estas indicaciones para revisar el servicio y diferenciar las comprobaciones locales de la integración completa del sistema.
 
-## 2. Análisis de la implementación
+## 5. Autenticación y autorización de Notifications
+- **Prompts:** pregunté cómo afectaba Keycloak al acceso a Notifications y qué debía tenerse en cuenta para sus endpoints.
+- **Qué se usó:** explicación de los tokens JWT y de la autorización para las llamadas internas desde Booking.
+- **Mi aporte:** revisé cómo debía describirse la seguridad del servicio sin confundir el acceso de usuarios con la comunicación entre microservicios.
 
-**Consulta realizada:**
+## 6. Documentación de arquitectura de Notifications
+- **Prompts:** pedí ayuda para organizar y revisar `docs/arq-notifications.md`, incluyendo endpoints, persistencia, idempotencia y comunicación con Booking.
+- **Qué se usó:** sugerencias de estructura, claridad técnica y consistencia entre secciones.
+- **Mi aporte:** trabajé en la documentación de arquitectura de Notifications y revisé que sus explicaciones coincidieran con el funcionamiento del proyecto.
 
-> Revisemos la implementación de Notifications en .NET, sus endpoints, la persistencia con PostgreSQL y cómo se registran las notificaciones.
+## 7. Revisión final de la documentación
+- **Prompts:** consulté si la documentación de Notifications estaba completa y qué afirmaciones necesitaban verificarse.
+- **Qué se usó:** revisión de coherencia y distinción entre funcionalidades implementadas, probadas y pendientes de validación.
+- **Mi aporte:** revisé el documento antes de compartirlo con el equipo, prestando atención a no presentar como comprobado algo que aún no estuviera validado.
 
-**Objetivo:** Analizar la estructura del servicio y verificar que sus responsabilidades estén correctamente identificadas.
+## 8. Actualización de la referencia del plan
+- **Prompts:** pedí ayuda para contrastar `docs/referencia-del-plan.md` con la arquitectura actual y con el README general, especialmente tras el cambio de Azure Service Bus a RabbitMQ.
+- **Qué se usó:** revisión de los servicios, el broker, el flujo de reservas, los estados, la consistencia eventual y Keycloak.
+- **Mi aporte:** trabajé en la actualización de la referencia del plan y revisé su coherencia con las decisiones vigentes del equipo.
 
-## 3. Prevención de notificaciones duplicadas
+## 9. Documentación técnica del frontend
+- **Prompts:** consulté cómo organizar `docs/documentacion-frontend.md`, explicar las rutas, componentes y comunicación con Availability, y diferenciarlo del `frontend/README.md`.
+- **Qué se usó:** asistencia para estructurar el documento, revisar las explicaciones del flujo de reserva y representar interacciones mediante Mermaid.
+- **Mi aporte:** elaboré y revisé la documentación técnica del frontend, corregí descripciones y comprobé que no duplicara innecesariamente el README de instalación.
 
-**Consulta realizada:**
-
-> ¿Cómo funciona la idempotencia en Notifications y qué papel cumple el identificador `ReservationId` para evitar registros duplicados?
-
-**Objetivo:** Comprender el mecanismo utilizado para evitar múltiples notificaciones asociadas a una misma reserva.
-
-## 4. Pruebas locales
-
-**Consulta realizada:**
-
-> ¿Cómo puedo probar los endpoints de Notifications y comprobar que las notificaciones se guardan correctamente en PostgreSQL?
-
-**Objetivo:** Guiar las pruebas locales del servicio, incluyendo el registro, la consulta y la prevención de duplicados.
-
-## 5. Autenticación con Keycloak
-
-**Consulta realizada:**
-
-> ¿Cómo afecta la incorporación de Keycloak al acceso a los endpoints de Notifications y qué pruebas deberían realizarse?
-
-**Objetivo:** Revisar los requisitos de autenticación y autorización incorporados al proyecto.
-
-## 6. Documentación de arquitectura
-
-**Consulta realizada:**
-
-> Ayudame a revisar y organizar el documento `docs/arq-notifications.md` para que explique la arquitectura, los endpoints, la persistencia, la idempotencia y la comunicación con Booking.
-
-**Objetivo:** Elaborar una documentación técnica clara y consistente con la implementación del proyecto.
-
-## 7. Validación final de la documentación
-
-**Consulta realizada:**
-
-> Revisemos si el documento de arquitectura de Notifications está completo y si hay afirmaciones que todavía requieren pruebas.
-
-**Objetivo:** Diferenciar las funcionalidades verificadas localmente de aquellas cuya integración completa todavía no había sido validada.
+## 10. Autenticación del frontend con Keycloak y Google
+- **Prompts:** pedí explicaciones sobre Keycloak, el inicio de sesión con Google, los tokens JWT y el flujo Authorization Code con PKCE.
+- **Qué se usó:** explicación del cliente `seat-web`, de la autenticación de usuarios y de las solicitudes protegidas a Availability.
+- **Mi aporte:** revisé la forma de explicar la autenticación en la documentación del frontend y la diferencié de la autenticación entre servicios.
 
 ---
 
 ## Uso de inteligencia artificial
 
-La inteligencia artificial se utilizó como herramienta de apoyo para comprender la arquitectura del microservicio Notifications, analizar su funcionamiento, orientar las pruebas locales y elaborar la documentación técnica.
-
-Las respuestas se contrastaron con el código y las pruebas disponibles. La IA no reemplazó la verificación de las funcionalidades ni el trabajo de integración realizado por el equipo.
-
-**Documento relacionado:** `docs/arq-notifications.md`.
+Utilicé ChatGPT como apoyo para comprender conceptos técnicos, contrastar documentación y revisar la claridad de las explicaciones. Mi trabajo se centró en el análisis y la documentación; la IA no sustituyó la revisión del proyecto ni las decisiones tomadas por el equipo.
