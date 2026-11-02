@@ -7,18 +7,10 @@ Solo usa la librería estándar de Python 3.8+ (no hace falta pip install).
 
 Uso:
     python tests_back_bloque_B.py
-    python tests_back_bloque_B.py --seat-inicial 9          # si ya usaste los asientos 1 a 8
-    python tests_back_bloque_B.py --only 9,10
     python tests_back_bloque_B.py --pago-rechazado          # activa 13d (ver nota abajo)
-
-IMPORTANTE: estas pruebas OCUPAN asientos de verdad. Cada corrida usa 8 asientos
-seguidos del evento elegido a partir de --seat-inicial. Para repetir desde cero:
-    docker compose down -v   y volver a levantar
-o bien correr con otro --seat-inicial (el evento 0 tiene 20 asientos).
 
 Nota 13d: necesita que Booking esté levantado con un precio por encima del máximo de
 Payment (por ejemplo Booking__SeatPriceCents=20000000 con Payment MaxAmount=100000).
-Las variantes 13e (vencimiento) y 13f (asiento liberado) se hacen a mano: ver el final.
 """
 
 import argparse

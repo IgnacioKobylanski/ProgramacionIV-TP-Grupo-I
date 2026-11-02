@@ -466,22 +466,19 @@ Problemas de sincronización entre Availability y Booking en la zona de consiste
 Permite comprobar la consistencia del sistema después de una operación.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+> PASS
 
 ---
 
@@ -500,22 +497,19 @@ Errores en el manejo de estados intermedios y filtraciones de información entre
 Permite comprobar el comportamiento del sistema durante procesos que no son instantáneos.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+> PASS
 
 ---
 
@@ -534,22 +528,19 @@ Problemas de idempotencia o procesamiento duplicado en Booking, Payment o Notifi
 Los reintentos y las reentregas del broker son habituales en sistemas distribuidos.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+> PASS
 
 ---
 
@@ -568,22 +559,19 @@ Inconsistencias entre microservicios o bases de datos.
 Evita situaciones donde el sistema muestre información contradictoria.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+> PASS
 
 ---
 
@@ -604,22 +592,19 @@ Condiciones de carrera entre las réplicas de Booking.
 Es fundamental en un sistema de reservas.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+> PASS
 
 ---
 
@@ -638,22 +623,19 @@ Fallos de sincronización y problemas de concurrencia bajo alta competencia por 
 Permite evaluar el comportamiento bajo alta competencia por un recurso.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+> PASS
 
 ---
 
@@ -672,22 +654,19 @@ Bloqueos innecesarios o problemas de concurrencia general.
 Permite evaluar el comportamiento del sistema bajo carga concurrente.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> REVISAR. Se ejecutaron 10 reservas simultáneas sobre 10 asientos distintos (evento 1, asientos 5 a 14) con `tests_back_bloque_D.py`. Todas las verificaciones automáticas pasaron, salvo el reparto entre las dos réplicas de Booking, que el script marcó como REVISAR porque no pudo leer los logs de Booking.
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se detectaron errores en el sistema. El REVISAR se debió a una limitación del script, no a una falla del backend. Se verificó manualmente con el comando `docker compose logs booking | Select-String "AUDITORIA inicio reserva" | Select-String "t20-"` (corrida `t20-194219`). Resultado: `booking-1` procesó 5 mensajes y `booking-2` procesó los otros 5. Se registraron 10 líneas de auditoría para 10 solicitudes, con 10 `CorrelationId` y 10 asientos distintos, sin mensajes duplicados.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> No fue necesario realizar un re-test del sistema. La verificación pendiente se resolvió revisando los logs manualmente.
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+> PASS
 
 ---
 
@@ -706,22 +685,19 @@ Fallos de idempotencia y duplicación de operaciones.
 Permite detectar problemas producidos por múltiples clics, reintentos o solicitudes duplicadas.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
+> PASS
 
 ---
 
@@ -755,9 +731,6 @@ Permite comprobar la resiliencia del sistema.
 
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
 
 ---
 
@@ -798,9 +771,6 @@ Los servicios distribuidos deben contemplar la posibilidad de que una dependenci
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
 
-**Observaciones finales:**  
-> [Completar]
-
 ---
 
 ## 24. Timeout de un microservicio
@@ -831,9 +801,6 @@ Evita que una dependencia lenta afecte indefinidamente al sistema.
 
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
 
 ---
 
@@ -869,9 +836,6 @@ Los microservicios deben validar la información recibida de sus dependencias.
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
 
-**Observaciones finales:**  
-> [Completar]
-
 ---
 
 ## 26. Recuperación después de un fallo
@@ -902,9 +866,6 @@ Permite evaluar la resiliencia del sistema frente a fallos temporales.
 
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
-
-**Observaciones finales:**  
-> [Completar]
 
 ---
 
@@ -953,9 +914,6 @@ Las reservas contienen información que debe estar protegida y las operaciones d
 **Resultado final:**  
 > [PASS / FAIL / REVISAR]
 
-**Observaciones finales:**  
-> [Completar]
-
 ---
 
 # Registro de errores y correcciones
@@ -964,7 +922,7 @@ Esta sección permite tener una vista general de los errores encontrados durante
 
 | ID | Prueba | Error encontrado | Corrección | Re-test | Resultado final |
 |---|---|---|---|---|---|
-| BUG-001 | 2. Body vacío o JSON malformado y 3. Campos obligatorios ausentes | Se detectó que el endpoint POST /reservations no valida campos obligatorios; ante campos ausentes responde 404 en vez de 400 | Pendiente | Pendiente | REVISAR |
+| BUG-001 | 2. Body vacío o JSON malformado y 3. Campos obligatorios ausentes | Se detectó que el endpoint POST /reservations no valida campos obligatorios; ante campos ausentes responde 404 en vez de 400 | Se implementó validación de campos obligatorios y manejo de JSONs malformados. | Se re-ejecutaron las solicitudes verificando respuesta 400 Bad Request. | PASS |
 
 > Las pruebas que no presenten errores no necesitan aparecer en este registro.
 
@@ -974,10 +932,10 @@ Esta sección permite tener una vista general de los errores encontrados durante
 
 | Bloque | Área | Cantidad de pruebas | PASS | FAIL | REVISAR |
 |---|---|---:|---:|---:|---:|
-| A | Contrato y validación de entrada | 8 | 6 |  | 2 |
+| A | Contrato y validación de entrada | 8 | 6 |  |  |
 | B | Reglas de negocio | 5 | 5 |  |  |
-| C | Estados y flujo asincrónico | 4 | [ ] | [ ] | [ ] |
-| D | Concurrencia | 4 | [ ] | [ ] | [ ] |
+| C | Estados y flujo asincrónico | 4 | 4 |  |  |
+| D | Concurrencia | 4 | 4 |  |  |
 | E | Microservicios y tolerancia a fallos | 5 | [ ] | [ ] | [ ] |
 | F | Seguridad y manejo de datos | 1 | [ ] | [ ] | [ ] |
-| **Total** | | **27** | **11** | **[ ]** | **2** |
+| **Total** | | **27** | **21** | **[ ]** | **[ ]** |

@@ -131,38 +131,27 @@ Se generó el script:
 
 El script contiene las pruebas correspondientes al Bloque B y permite ejecutarlas individualmente o en conjunto.
 
-# Próximos prompts
+# Prompt 5: Generación de scripts para los bloques C, D, E y F
 
-Para cada bloque restante se generará un prompt específico destinado a obtener los scripts necesarios para ejecutar las pruebas correspondientes.
+**Prompt utilizado:**
 
+> Generame los scripts necesarios para poder realizar las pruebas correspondientes a los bloques C-F sobre el backend.
 
-## Bloque C
+Los cuatro bloques se pidieron en un único prompt, tomando como referencia las pruebas definidas en `backend-tests.md`.
 
-> [Agregar aquí el prompt utilizado para generar los scripts del bloque C]
+### Resultado
 
-**Script generado:**  
-> [Nombre del archivo]
+Se generaron cinco archivos de Python, uno por bloque más un módulo compartido:
 
-## Bloque D
+| Archivo | Contenido |
+|---|---|
+| `tests_back_bloque_C.py` | Bloque C: estados y flujo asincrónico (pruebas 14 a 17). |
+| `tests_back_bloque_D.py` | Bloque D: concurrencia (pruebas 18 a 21). |
+| `tests_back_bloque_E.py` | Bloque E: microservicios y tolerancia a fallos (pruebas 22 a 26). Requiere Docker. |
+| `tests_back_bloque_F.py` | Bloque F: seguridad y manejo de datos (prueba 27, con sub-pruebas 27a a 27j). |
+| `tests_back_comun.py` | Utilidades compartidas que importan los cuatro scripts anteriores (tokens, reservas, consultas a Booking y Postgres, registro de resultados y CSV). No se ejecuta solo. |
 
-> [Agregar aquí el prompt utilizado para generar los scripts del bloque D]
-
-**Script generado:**  
-> [Nombre del archivo]
-
-## Bloque E
-
-> [Agregar aquí el prompt utilizado para generar los scripts del bloque E]
-
-**Script generado:**  
-> [Nombre del archivo]
-
-## Bloque F
-
-> [Agregar aquí el prompt utilizado para generar los scripts del bloque F]
-
-**Script generado:**  
-> [Nombre del archivo]
+Igual que el script del bloque A, usan solo la librería estándar de Python, permiten elegir pruebas con `--only` y deben estar en la misma carpeta (`scripts/`) para funcionar.
 
 ---
 
