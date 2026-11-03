@@ -718,19 +718,19 @@ Fallos en el manejo de errores entre microservicios.
 Permite comprobar la resiliencia del sistema.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
@@ -757,19 +757,21 @@ Problemas de comunicación entre microservicios y estados inconsistentes cuando 
 Los servicios distribuidos deben contemplar la posibilidad de que una dependencia no esté disponible.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> 23a: PASS
+> 23b: PASS
+> 23c: FAIL (por tiempo de respuesta). Con RabbitMQ detenido, `POST /reservations` responde 503 correctamente, pero tarda más de lo esperado.
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> 23c: se midieron 8,7 s y 11,7 s en dos ejecuciones con `tests_back_bloque_E.py`, frente a los ~5 s esperados (el código de Availability fija un timeout de conexión de 5 s). El código de estado es el correcto (503, sin 500) y no queda ninguna reserva en Booking [confirmar con tu salida]. Causa a investigar; no se verificó en el código.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> PENDIENTE
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> PENDIENTE
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> FAIL (23c, por tiempo)
 
 ---
 
@@ -788,19 +790,19 @@ Solicitudes bloqueadas, tiempos de respuesta excesivos o falta de manejo de time
 Evita que una dependencia lenta afecte indefinidamente al sistema.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
@@ -822,19 +824,20 @@ Falta de validación de respuestas y mensajes entre servicios.
 Los microservicios deben validar la información recibida de sus dependencias.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> 25a: PASS
+> 25b: PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
@@ -853,19 +856,19 @@ Problemas de recuperación y manejo de reintentos.
 Permite evaluar la resiliencia del sistema frente a fallos temporales.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
@@ -900,19 +903,19 @@ Fallos de autenticación, autorización entre usuarios y entre servicios, o de v
 Las reservas contienen información que debe estar protegida y las operaciones deben ejecutarse únicamente cuando el usuario o el servicio tengan los permisos correspondientes.
 
 **Resultado inicial:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 **Observaciones / errores encontrados:**  
-> [Completar]
+> No se encontraron errores.
 
 **Corrección realizada:**  
-> [Completar / No aplica]
+> [No aplica]
 
 **Re-test:**  
-> [Completar / No fue necesario realizar un re-test]
+> [No fue necesario realizar un re-test]
 
 **Resultado final:**  
-> [PASS / FAIL / REVISAR]
+> PASS
 
 ---
 
@@ -923,6 +926,7 @@ Esta sección permite tener una vista general de los errores encontrados durante
 | ID | Prueba | Error encontrado | Corrección | Re-test | Resultado final |
 |---|---|---|---|---|---|
 | BUG-001 | 2. Body vacío o JSON malformado y 3. Campos obligatorios ausentes | Se detectó que el endpoint POST /reservations no valida campos obligatorios; ante campos ausentes responde 404 en vez de 400 | Se implementó validación de campos obligatorios y manejo de JSONs malformados. | Se re-ejecutaron las solicitudes verificando respuesta 400 Bad Request. | PASS |
+| BUG-002 | 23C. Detener RabbitMQ (`docker compose stop rabbitmq`) y crear una reserva. | Con RabbitMQ detenido, `POST /reservations` responde 503 correctamente, pero tarda más de lo esperado. | Pendiente | Pendiente | REVISION |
 
 > Las pruebas que no presenten errores no necesitan aparecer en este registro.
 
@@ -932,10 +936,10 @@ Esta sección permite tener una vista general de los errores encontrados durante
 
 | Bloque | Área | Cantidad de pruebas | PASS | FAIL | REVISAR |
 |---|---|---:|---:|---:|---:|
-| A | Contrato y validación de entrada | 8 | 6 |  |  |
+| A | Contrato y validación de entrada | 8 | 8 |  |  |
 | B | Reglas de negocio | 5 | 5 |  |  |
 | C | Estados y flujo asincrónico | 4 | 4 |  |  |
 | D | Concurrencia | 4 | 4 |  |  |
-| E | Microservicios y tolerancia a fallos | 5 | [ ] | [ ] | [ ] |
-| F | Seguridad y manejo de datos | 1 | [ ] | [ ] | [ ] |
-| **Total** | | **27** | **21** | **[ ]** | **[ ]** |
+| E | Microservicios y tolerancia a fallos | 5 | 4 | 1 |  |
+| F | Seguridad y manejo de datos | 1 | 1 |  |  |
+| **Total** | | **27** | **26** | **1** | **[ ]** |
